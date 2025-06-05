@@ -1,20 +1,32 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(rustdoc::missing_crate_level_docs)] // it's an example
 
-use std::sync::{atomic::{AtomicBool, Ordering}, OnceLock};
+use std::sync::{
+    atomic::{AtomicBool, Ordering}, mpsc, Arc, Mutex, OnceLock
+};
 
 use eframe::{
-    egui::{self, pos2, Area, Color32,  Id, Pos2, Rect, Rgba,  UiBuilder, Vec2},
-    epaint::{
-        text::{FontInsert, InsertFontFamily},
-        CornerRadiusF32,
-    },
+    egui::{self, Area, Color32, Id, Pos2, Vec2, ViewportCommand},
+    epaint::text::{FontInsert, InsertFontFamily},
 };
+use rdev::{listen, Event, EventType, Key};
 use serde::{Deserialize, Serialize};
 
+use crate::{enums::TeleData, ui::{
+    other_logic::{check_first, check_is_focus, global_hk, keyData, listen_mouse_pass_event, rev_gloabl_hk},
+    sector::render_sector,
+}};
 
-pub static IS_FIRST: OnceLock<AtomicBool> = OnceLock::new();
-
+pub static IS_FIRST: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
+pub static IS_MOUSE_PASS: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
+pub static LAST_IS_MOUSE_PASS: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
+pub static NEED_FIX_POS: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
+pub static SECTORID: OnceLock<Id> = OnceLock::new();
+pub static CTX: OnceLock<&egui::Context> = OnceLock::new();
+// pub static SHORTCUT_RX: OnceLock<mpsc::Receiver<keyData>> = OnceLock::new();
+static DEFAULT_INNERSIZE: Vec2 = egui::vec2(2100.0, 1300.0);
+static DEFAULT_POS2: Pos2 = egui::pos2(-180.0, -180.0);
+pub static DEFAULT_SECTOR_POS: Pos2 = egui::pos2(700.0, 200.0);
 
 pub fn main() -> eframe::Result {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
@@ -27,30 +39,36 @@ pub fn main() -> eframe::Result {
                         //     options,
                         //     Box::new(|cc| Ok(Box::new(MyApp::new(cc)))),
                         // )
+                        // key_listener();
+    SECTORID.set(Id::new("sector")).unwrap();
+    global_hk();
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([560.0, 180.0]) // Initial size of the window\
-            // .with_position([500.0, 500.0])
+            .with_inner_size([DEFAULT_INNERSIZE.x, DEFAULT_INNERSIZE.y]) // Initial size of the window\
+            .with_position([DEFAULT_POS2.x, DEFAULT_POS2.y])
+            .with_decorations(false)
             .with_transparent(true) // Crucial: Make the native window transparent
-            .with_decorations(false) // Crucial: Remove native window decorations (title bar, borders)
-            .with_always_on_top() // Crucial: Keep the window on top of others
-            .with_resizable(false)
-            .with_maximize_button(false)
-            .with_mouse_passthrough(false), // Start with mouse passthrough enabled
-            persist_window: true,
-            renderer: eframe::Renderer::Wgpu, // Explicitly tell eframe to use Wgpu
-            
-            
+            .with_fullscreen(true)
+            .with_resizable(true)
+            .with_maximize_button(true)
+            .with_mouse_passthrough(true) // Start with mouse passthrough enabled
+            .with_always_on_top(), // Crucial: Keep the window on top of others
+        multisampling: 1,
+        renderer: eframe::Renderer::Glow,
+        // persist_window: false,
+        // renderer: eframe::Renderer::Wgpu, // Explicitly tell eframe to use Wgpu
+        vsync: true,
         ..Default::default()
     };
 
     eframe::run_native(
-        "egui Transparent Overlay",
+        "fm8_hud",
         options,
         // Box::new(|_cc| Ok(Box::new(MyApp::new(_cc)))),
         Box::new(|cc| {
             // 关键步骤 2: 在应用初始化时加载持久化状态
+            // let mut app: MyApp = MyApp::new(cc);
             let mut app: MyApp = if let Some(storage) = cc.storage {
                 // 如果有存储，尝试加载状态
                 let a: Option<MyApp> = eframe::get_value(storage, eframe::APP_KEY);
@@ -60,12 +78,17 @@ pub fn main() -> eframe::Result {
                 }
             } else {
                 // 如果没有存储（例如首次运行），使用默认值
-                println!("🪵 [index.rs:61]~ token ~ \x1b[0;32m没有存储\x1b[0m = {}", "没有存储");
+                println!(
+                    "🪵 [index.rs:61]~ token ~ \x1b[0;32m没有存储\x1b[0m = {}",
+                    "没有存储"
+                );
                 MyApp::new(cc)
             };
+
             replace_fonts(&cc.egui_ctx);
             add_font(&cc.egui_ctx);
             reset_myapp(&mut app);
+            // inputbot_listen();
             Ok(Box::new(app))
         }),
     )
@@ -144,10 +167,74 @@ fn replace_fonts(ctx: &egui::Context) {
 
 fn reset_myapp(me: &mut MyApp) {
     me.show_ui = false;
+    me.mouse_pass = true;
 }
 
-#[derive(Debug, Serialize,Deserialize)]
-struct MyApp {
+fn force_check_fullscreen(ui: &mut egui::Ui, ctx: &egui::Context) {
+    let fullscreen = ui.input(|i| i.viewport().fullscreen.unwrap_or(false));
+    if fullscreen {
+        ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
+    }
+}
+
+fn get_cur_position(ctx: &egui::Context, app: &mut MyApp) {
+    let mut desired_pos: Option<Vec2> = None;
+    ctx.input(|input| {
+        if let Some(size) = input.viewport().monitor_size {
+            // let center = pos2(size.x / 2.0, size.y / 2.0) - pos2(310.0, 120.0);
+            desired_pos = input.viewport().outer_rect.and_then(|current_position| {
+                Option::Some(Vec2::new(current_position.min.x, current_position.min.y))
+            })
+        }
+    });
+    if let Some(pos) = desired_pos {
+        // println!("🪵 [index.rs:191]~ token ~ \x1b[0;32mdesired_pos\x1b[0m = {} {}", pos.x,pos.y);
+        app.pox = pos.x;
+        app.poy = pos.y;
+    }
+}
+
+fn set_need_fix_pos() {
+    tokio::spawn(async move {
+        tokio::time::sleep(tokio::time::Duration::from_millis(15)).await;
+        let need_fix_pos = NEED_FIX_POS
+            .get_or_init(|| Mutex::new(AtomicBool::new(false)))
+            .lock();
+        let need_fix_pos = match need_fix_pos {
+            Ok(h) => h,
+            Err(e) => return,
+        };
+        need_fix_pos.store(true, Ordering::SeqCst);
+    });
+}
+
+fn fix_viewport_size(ctx: &egui::Context) {
+    // let need_fix_pos = NEED_FIX_POS
+    //     .get_or_init(|| Mutex::new(AtomicBool::new(false)))
+    //     .lock();
+    // let need_fix_pos = match need_fix_pos {
+    //     Ok(h) => h,
+    //     Err(e) => return,
+    // };
+    // if need_fix_pos.load(Ordering::SeqCst) {
+    //     ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(DEFAULT_INNERSIZE));
+    //     ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(DEFAULT_POS2));
+    // }
+    ctx.send_viewport_cmd(egui::ViewportCommand::Decorations(true));
+    ctx.send_viewport_cmd(egui::ViewportCommand::Transparent(true));
+    ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(DEFAULT_INNERSIZE));
+    ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(DEFAULT_POS2));
+    ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(DEFAULT_POS2));
+}
+fn fix_transparent(ctx: &egui::Context) {
+    ctx.send_viewport_cmd(egui::ViewportCommand::Transparent(true));
+    // ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(true));
+
+    // ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MyApp {
     pub text: String,
     pub value: String,
     pub show_ui: bool, // Toggle UI visibility
@@ -155,26 +242,43 @@ struct MyApp {
     pub xoffset: f32,
     pub pox: f32,
     pub poy: f32,
+    pub mouse_pass: bool,
+    pub sector_size: Vec<f32>,
+    pub fullscreen: bool,
+    pub transparent: bool,
+    pub sector_pos: Pos2,
+    pub tele_data:TeleData
+
 }
 
 impl MyApp {
+    
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        
         Self {
             text: "Edit this text field if you want".to_owned(),
             value: "Edit this text field if you want".to_owned(),
             show_ui: false,
+            mouse_pass: true,
             yoffset: 0.0,
             xoffset: 0.0,
-            pox: 500.0,
-            poy: 500.0,
+            pox: 0.0,
+            poy: 0.0,
+            sector_size: vec![560.0, 180.0],
+            fullscreen: true,
+            transparent: true,
+            sector_pos: DEFAULT_SECTOR_POS,
+            tele_data: TeleData::default(),
         }
     }
 }
 
 impl eframe::App for MyApp {
+
+    
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        Rgba::TRANSPARENT.to_array() // Alpha 值为 0.0，表示完全透明
+        // Rgba::TRANSPARENT.to_array() // Alpha 值为 0.0，表示完全透明
+        // Rgba::TRANSPARENT.to_array()
+        [0.0, 0.0, 0.0, 0.0]
     }
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
@@ -184,107 +288,83 @@ impl eframe::App for MyApp {
         // storage.set_string("MyApp", serde_json::to_string(self).unwrap());
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
-// snip
+    // snip
+
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
 
         
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame,) {
-        if ctx.input(|i| i.key_pressed(egui::Key::F1)) {
-            self.show_ui = !self.show_ui;
-            // Optionally, toggle mouse passthrough when UI visibility changes
-            // ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(!self.show_ui));
-            ctx.send_viewport_cmd(egui::ViewportCommand::Decorations(self.show_ui));
-            self.yoffset = if self.show_ui { 10.0 } else { 43.0 };
-            self.xoffset = if self.show_ui { 0.0 } else { 10.0 };
-        }
-        if IS_FIRST.get_or_init(|| AtomicBool::new(true)).load(Ordering::SeqCst) {
-            ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(Pos2::new(self.pox, self.poy)));
-            IS_FIRST.get().unwrap().store(false, Ordering::SeqCst);
+        // let ctx_ = CTX.set(&ctx);
+        
+        // fix_viewport_size(ctx);
+        // fix_transparent(ctx);
 
-        }
-
-        let mut desired_pos: Option<Vec2>= None;
-        ctx.input(|input| {
-            if let Some(size) = input.viewport().monitor_size {
-                let center = pos2(size.x/2.0, size.y /2.0) - pos2(310.0, 120.0) ;
-                desired_pos = input.viewport().outer_rect.and_then(|current_position| {
-                    Option::Some(Vec2::new(current_position.min.x, current_position.min.y))
-                })
-            }
-        });
-        if let Some(pos) = desired_pos {
-            // println!("🪵 [index.rs:191]~ token ~ \x1b[0;32mdesired_pos\x1b[0m = {} {}", pos.x,pos.y);
-            self.pox = pos.x;
-            self.poy = pos.y;
-        }
-
-        // if let Some(pos) = desired_pos {
-        //     let move_command = egui::ViewportCommand::OuterPosition(pos2(pos.x, pos.y));
-        //     ctx.send_viewport_cmd(move_command);
-        // }
-        // ctx.input(|input| {
-        //     if let Some(size) = input.viewport().monitor_size {
-        //         let res: Option<Rect> = input.viewport().outer_rect.and_then(|current_position| {
-        //             Some(current_position)
-        //         });
-        //     }
-        // });
-        // let pos = ctx.viewport(|viewport_state| {
-        //     // 这个闭包就是 `reader`
-        //     // 它可以访问 `&ViewportState`
-        //     ;et pos = viewport_state.
-        // });
-        // if !self.show_ui {
-        //     // Create a custom window that acts as your overlay UI
-
+        // if ctx.input(|i| i.key_pressed(egui::Key::F11)) {
+        //     ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
         // }
 
-        Area::new(Id::new("test"))
-            .fixed_pos(egui::pos2(100.0+self.xoffset, self.yoffset)) // 固定位置
-            .show(ctx, |ui| {
-                // 这个文本会直接显示在透明的 viewport 上，没有任何背景
+        if ctx.input(|i| i.key_pressed(egui::Key::F2)) {
+            let handle = IS_MOUSE_PASS
+                .get_or_init(|| Mutex::new(AtomicBool::new(true)))
+                .lock();
+            let handle = match handle {
+                Ok(h) => h,
+                Err(e) => return,
+            };
+            let is_mouse_pass = handle.load(Ordering::SeqCst);
+            handle.store(!is_mouse_pass, Ordering::SeqCst);
+        }
+        // println!("update");
+        listen_mouse_pass_event(ctx, self);
 
-                // 定义圆角矩形的尺寸
-                let desired_size = egui::vec2(210.0, 50.0);
-                // 分配一个精确大小的区域，这将是我们绘制矩形的边界
-                let (rect, _response) = ui.allocate_exact_size(desired_size, egui::Sense::hover());
+        check_first(ctx, self);
 
-                // 获取 painter
-                let painter = ui.painter();
+        check_is_focus(ctx, self);
 
-                // 定义填充颜色: #A2000000 (ARGB) -> 64% 透明度的黑色 (RGBA: 0,0,0,162)
-                let fill_color = Color32::from_rgba_unmultiplied(0, 0, 0, 80);
+        // get_cur_position(ctx, self);
 
-                // 定义圆角半径
-                let corner_radius = 6.0; // 较大的圆角，更明显
+        // test_transparent(ctx, self);
 
-                // 绘制填充的圆角矩形
-                painter.rect_filled(
-                    rect,
-                    CornerRadiusF32::same(corner_radius), // 所有角的圆角半径相同
-                    fill_color,
-                );
+        render_sector(ctx, self);
+    }
+}
 
-                // 在矩形中央添加一些文本，以显示其半透明效果
-                // 确保文本位于绘制的矩形内部
-                ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
-                    ui.with_layout(
-                        egui::Layout::centered_and_justified(egui::Direction::TopDown),
-                        |ui| {
-                            ui.add_space(5.0); // 顶部一点空间
-                                               // ui.label(egui::RichText::new("Area 中的圆角矩形").color(Color32::WHITE).size(22.0));
-                            ui.label(
-                                egui::RichText::new("01:00:00")
-                                    .family(egui::FontFamily::Proportional)
-                                    .color(Color32::WHITE)
-                                    .size(24.0),
-                            );
-                            ui.add_space(5.0); // 文本和按钮之间的空间
-                                               // if ui.button("点击我").clicked() {
-                                               //     println!("按钮在 Area 中被点击了!");
-                                               // }
-                        },
-                    );
+pub fn test() {
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_transparent(true)
+            .with_fullscreen(true),
+
+            //The following two lines solve the problem
+            multisampling: 1,
+            renderer: eframe::Renderer::Glow,
+
+        ..Default::default()
+    };
+    let _ = eframe::run_native(
+        "My egui App",
+        options,
+        Box::new(|_cc| Ok(Box::<TestApp>::default())),
+    );
+    #[derive(Default)]
+    struct TestApp {
+        fullscreen: bool,
+        transparent: bool,
+    }
+
+    impl eframe::App for TestApp {
+        fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+            Area::new("fullscreen overlay".into())
+                .current_pos(egui::pos2(200.0, 200.0)) 
+                .movable(true) 
+                .show(ctx, |ui| {
+                    ui.label(egui::RichText::new("fullscreen overlay")
+                    .color(Color32::WHITE)
+                    .size(32.0),);
                 });
-            });
+        }
+
+        fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+            egui::Rgba::TRANSPARENT.to_array()
+        }
     }
 }

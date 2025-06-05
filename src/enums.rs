@@ -1,5 +1,5 @@
 use crate::uitl::get_sys_username;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 
 pub const POT_GET_PROGRESS_TIME: u32 = 20484;
@@ -96,5 +96,15 @@ pub struct MyApp {
 impl Default for MyApp {
     fn default() -> Self {
         Self { value: 0.5 }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TeleData {
+    pub speed: f32,
+}
+impl Default for TeleData {
+    fn default() -> Self {
+        Self { speed: 0.0 }
     }
 }

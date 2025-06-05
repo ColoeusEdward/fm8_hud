@@ -23,6 +23,7 @@ use egui::{Color32, Rgba};
 async fn main() {
     
     let _ =ui::index::main();
+    // let _ =ui::index::test();
     
     
 }
@@ -47,3 +48,5 @@ async fn main() {
 //     read(&mut f1, &mut vec![]);
 //     close(&mut f1);
 // }
+
+

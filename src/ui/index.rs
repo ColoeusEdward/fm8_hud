@@ -12,7 +12,7 @@ use eframe::{
 use rdev::{listen, Event, EventType, Key};
 use serde::{Deserialize, Serialize};
 
-use crate::{enums::TeleData, ui::{
+use crate::{enums::{TeleData, GT_FONT_PATH}, ui::{
     other_logic::{check_first, check_is_focus, global_hk, keyData, listen_mouse_pass_event, rev_gloabl_hk},
     sector::render_sector,
 }};
@@ -99,7 +99,7 @@ fn add_font(ctx: &egui::Context) {
     ctx.add_font(FontInsert::new(
         "my_font",
         egui::FontData::from_static(include_bytes!(
-            "D:\\Software\\SimHub\\DashFonts\\arkitech_bold.ttf"
+            "../../resource/arkitech_bold.ttf"
         )),
         vec![
             InsertFontFamily {
@@ -124,14 +124,14 @@ fn replace_fonts(ctx: &egui::Context) {
     fonts.font_data.insert(
         "gt_font".to_owned(),
         std::sync::Arc::new(egui::FontData::from_static(include_bytes!(
-            "D:\\Software\\SimHub\\DashFonts\\arkitech_bold.ttf"
+            "../../resource/arkitech_bold.ttf"
         ))),
     );
 
     fonts.font_data.insert(
         "base_font".to_owned(),
         std::sync::Arc::new(egui::FontData::from_static(include_bytes!(
-            "D:\\Software\\SimHub\\DashFonts\\bahnschrift.ttf"
+            "../../resource/ArialMonospace.ttf"
         ))),
     );
 

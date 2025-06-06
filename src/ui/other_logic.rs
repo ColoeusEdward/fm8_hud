@@ -1,19 +1,19 @@
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc, Mutex,
+         Mutex,
     },
     thread,
 };
 
-use eframe::egui::{self, Pos2};
-use global_hotkey::{hotkey::HotKey, GlobalHotKeyEvent};
-use rdev::{listen, EventType, Key, ListenError};
-use tokio::{task::LocalSet, time::sleep};
+use eframe::egui::{self};
+use global_hotkey::{ GlobalHotKeyEvent};
+use rdev::{listen, EventType, Key};
+use tokio::{ time::sleep};
 
 use crate::ui::index::{IS_FIRST, IS_MOUSE_PASS, LAST_IS_MOUSE_PASS};
 
-pub struct keyData {
+pub struct KeyData {
     pub key: Key,
     pub mouse_pass: bool,
 }

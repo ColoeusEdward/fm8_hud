@@ -2,18 +2,17 @@
 #![allow(rustdoc::missing_crate_level_docs)] // it's an example
 
 use std::sync::{
-    atomic::{AtomicBool, Ordering}, mpsc, Arc, Mutex, OnceLock
+    atomic::{AtomicBool, Ordering}, Mutex, OnceLock
 };
 
 use eframe::{
-    egui::{self, Area, Color32, Id, Pos2, Vec2, ViewportCommand},
+    egui::{self, Area, Color32, Id, Pos2, Vec2},
     epaint::text::{FontInsert, InsertFontFamily},
 };
-use rdev::{listen, Event, EventType, Key};
 use serde::{Deserialize, Serialize};
 
-use crate::{enums::{TeleData, GT_FONT_PATH}, ui::{
-    other_logic::{check_first, check_is_focus, global_hk, keyData, listen_mouse_pass_event, rev_gloabl_hk},
+use crate::{enums::{TeleData}, ui::{
+    other_logic::{check_first, check_is_focus, global_hk, listen_mouse_pass_event},
     sector::render_sector,
 }};
 

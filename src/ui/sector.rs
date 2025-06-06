@@ -1,5 +1,5 @@
 use eframe::{
-    egui::{self, Area, Color32, Id, Pos2, UiBuilder, ViewportCommand},
+    egui::{self, Area, Color32,UiBuilder, ViewportCommand},
     epaint::CornerRadiusF32,
 };
 

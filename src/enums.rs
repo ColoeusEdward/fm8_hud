@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{env, sync::OnceLock};
+use std::{ sync::OnceLock};
 
 // pub const GT_FONT_PATH: &str = "./arkitech_medium.ttf";
 pub const GT_FONT_PATH: &str = "./resource/arkitech_medium.ttf";

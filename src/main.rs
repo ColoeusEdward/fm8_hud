@@ -2,10 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(rustdoc::missing_crate_level_docs)] // it's an example
 
-use enums::MyApp;
 // use std::io;
 // use utf8_slice::slice;
-use tokio::time::{sleep, Duration};
 use tokio::{self};
 
 
@@ -16,8 +14,6 @@ mod controllers;
 mod enums;
 mod uitl;
 mod ui;
-use eframe::{egui, NativeOptions};
-use egui::{Color32, Rgba};
 
 #[tokio::main]
 async fn main() {

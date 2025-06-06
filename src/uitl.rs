@@ -264,3 +264,4 @@ pub fn ping(target: &str) -> Result<Output, Box<dyn Error>> {
 
     Ok(output)
 }
+

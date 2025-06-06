@@ -1,7 +1,7 @@
 [package]
 name = "fm8_hud"
-version = "0.1.8"
-edition = "2021"
+version = "0.1.10"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -25,8 +25,6 @@ percent-encoding = "2.3.1"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 enigo = "0.3.0"
-eframe = { version = "0.31.1", features = ["default","persistence"] }
 env_logger = "0.11.8"
 rdev = "0.5.3"
-global-hotkey= { git = "https://github.com/tauri-apps/global-hotkey", branch = "renovate/eframe-0.x" }
-# global-hotkey = "0.7.0"
+eframe = { version = "0.31.1", features = ["persistence", "serde"] }

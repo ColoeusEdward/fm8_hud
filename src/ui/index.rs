@@ -1,8 +1,8 @@
-// #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
-#![allow(rustdoc::missing_crate_level_docs)] // it's an example
-
-use std::sync::{
-    atomic::{AtomicBool, Ordering}, Mutex, OnceLock
+use std::{
+    collections::hash_set, sync::{
+        atomic::{AtomicBool, Ordering},
+        Mutex, OnceLock,
+    }
 };
 
 use eframe::{
@@ -11,10 +11,13 @@ use eframe::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{enums::{TeleData}, ui::{
-    other_logic::{check_first, check_is_focus, global_hk, listen_mouse_pass_event},
-    sector::render_sector,
-}};
+use crate::{
+    enums::TeleData,
+    ui::{
+        other_logic::{check_first, check_is_focus, global_hk, listen_mouse_pass_event},
+        sector::{render_sector, render_sight},
+    },
+};
 
 pub static IS_FIRST: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
 pub static IS_MOUSE_PASS: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
@@ -22,10 +25,54 @@ pub static LAST_IS_MOUSE_PASS: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
 pub static NEED_FIX_POS: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
 pub static SECTORID: OnceLock<Id> = OnceLock::new();
 pub static CTX: OnceLock<&egui::Context> = OnceLock::new();
+pub static  KEYRECORD: OnceLock<Mutex<hash_set::HashSet<rdev::Key>>> = OnceLock::new();
 // pub static SHORTCUT_RX: OnceLock<mpsc::Receiver<keyData>> = OnceLock::new();
 static DEFAULT_INNERSIZE: Vec2 = egui::vec2(2100.0, 1300.0);
 static DEFAULT_POS2: Pos2 = egui::pos2(-180.0, -180.0);
 pub static DEFAULT_SECTOR_POS: Pos2 = egui::pos2(700.0, 200.0);
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MyApp {
+    pub text: String,
+    pub value: String,
+    pub show_ui: bool, // Toggle UI visibility
+    pub yoffset: f32,
+    pub xoffset: f32,
+    pub pox: f32,
+    pub poy: f32,
+    pub mouse_pass: bool,
+    pub sector_size: Vec<f32>,
+    pub fullscreen: bool,
+    pub transparent: bool,
+    pub sector_pos: Pos2,
+    pub tele_data: TeleData,
+    pub sight_pos: Pos2,
+}
+
+impl MyApp {
+
+    fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        test();
+        Self {
+            text: "Edit this text field if you want".to_owned(),
+            value: "Edit this text field if you want".to_owned(),
+            show_ui: false,
+            mouse_pass: true,
+            yoffset: 0.0,
+            xoffset: 0.0,
+            pox: 0.0,
+            poy: 0.0,
+            sector_size: vec![560.0, 180.0],
+            fullscreen: true,
+            transparent: true,
+            sector_pos: DEFAULT_SECTOR_POS,
+            tele_data: TeleData::default(),
+            sight_pos: Pos2 { x: 0.0, y: 0.0 },
+        }
+    }
+}
+
 
 pub fn main() -> eframe::Result {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
@@ -70,7 +117,7 @@ pub fn main() -> eframe::Result {
             // let mut app: MyApp = MyApp::new(cc);
             let mut app: MyApp = if let Some(storage) = cc.storage {
                 // 如果有存储，尝试加载状态
-                let a: Option<MyApp> = eframe::get_value(storage, eframe::APP_KEY);
+                let a= eframe::get_value(storage, eframe::APP_KEY);
                 match a {
                     Some(a) => a,
                     None => MyApp::new(cc),
@@ -91,15 +138,14 @@ pub fn main() -> eframe::Result {
             Ok(Box::new(app))
         }),
     )
+
 }
 
 // Demonstrates how to add a font to the existing ones
 fn add_font(ctx: &egui::Context) {
     ctx.add_font(FontInsert::new(
         "my_font",
-        egui::FontData::from_static(include_bytes!(
-            "../../resource/arkitech_bold.ttf"
-        )),
+        egui::FontData::from_static(include_bytes!("../../resource/arkitech_bold.ttf")),
         vec![
             InsertFontFamily {
                 family: egui::FontFamily::Proportional,
@@ -169,12 +215,12 @@ fn reset_myapp(me: &mut MyApp) {
     me.mouse_pass = true;
 }
 
-fn force_check_fullscreen(ui: &mut egui::Ui, ctx: &egui::Context) {
-    let fullscreen = ui.input(|i| i.viewport().fullscreen.unwrap_or(false));
-    if fullscreen {
-        ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
-    }
-}
+// fn force_check_fullscreen(ui: &mut egui::Ui, ctx: &egui::Context) {
+//     let fullscreen = ui.input(|i| i.viewport().fullscreen.unwrap_or(false));
+//     if fullscreen {
+//         ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
+//     }
+// }
 
 fn get_cur_position(ctx: &egui::Context, app: &mut MyApp) {
     let mut desired_pos: Option<Vec2> = None;
@@ -193,91 +239,36 @@ fn get_cur_position(ctx: &egui::Context, app: &mut MyApp) {
     }
 }
 
-fn set_need_fix_pos() {
-    tokio::spawn(async move {
-        tokio::time::sleep(tokio::time::Duration::from_millis(15)).await;
-        let need_fix_pos = NEED_FIX_POS
-            .get_or_init(|| Mutex::new(AtomicBool::new(false)))
-            .lock();
-        let need_fix_pos = match need_fix_pos {
-            Ok(h) => h,
-            Err(e) => return,
-        };
-        need_fix_pos.store(true, Ordering::SeqCst);
-    });
-}
+// fn set_need_fix_pos() {
+//     tokio::spawn(async move {
+//         tokio::time::sleep(tokio::time::Duration::from_millis(15)).await;
+//         let need_fix_pos = NEED_FIX_POS
+//             .get_or_init(|| Mutex::new(AtomicBool::new(false)))
+//             .lock();
+//         let need_fix_pos = match need_fix_pos {
+//             Ok(h) => h,
+//             Err(e) => return,
+//         };
+//         need_fix_pos.store(true, Ordering::SeqCst);
+//     });
+// }
 
-fn fix_viewport_size(ctx: &egui::Context) {
-    // let need_fix_pos = NEED_FIX_POS
-    //     .get_or_init(|| Mutex::new(AtomicBool::new(false)))
-    //     .lock();
-    // let need_fix_pos = match need_fix_pos {
-    //     Ok(h) => h,
-    //     Err(e) => return,
-    // };
-    // if need_fix_pos.load(Ordering::SeqCst) {
-    //     ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(DEFAULT_INNERSIZE));
-    //     ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(DEFAULT_POS2));
-    // }
-    ctx.send_viewport_cmd(egui::ViewportCommand::Decorations(true));
-    ctx.send_viewport_cmd(egui::ViewportCommand::Transparent(true));
-    ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(DEFAULT_INNERSIZE));
-    ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(DEFAULT_POS2));
-    ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(DEFAULT_POS2));
-}
-fn fix_transparent(ctx: &egui::Context) {
-    ctx.send_viewport_cmd(egui::ViewportCommand::Transparent(true));
-    // ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(true));
-
-    // ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MyApp {
-    pub text: String,
-    pub value: String,
-    pub show_ui: bool, // Toggle UI visibility
-    pub yoffset: f32,
-    pub xoffset: f32,
-    pub pox: f32,
-    pub poy: f32,
-    pub mouse_pass: bool,
-    pub sector_size: Vec<f32>,
-    pub fullscreen: bool,
-    pub transparent: bool,
-    pub sector_pos: Pos2,
-    pub tele_data:TeleData
-
-}
-
-impl MyApp {
-    
-    fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        Self {
-            text: "Edit this text field if you want".to_owned(),
-            value: "Edit this text field if you want".to_owned(),
-            show_ui: false,
-            mouse_pass: true,
-            yoffset: 0.0,
-            xoffset: 0.0,
-            pox: 0.0,
-            poy: 0.0,
-            sector_size: vec![560.0, 180.0],
-            fullscreen: true,
-            transparent: true,
-            sector_pos: DEFAULT_SECTOR_POS,
-            tele_data: TeleData::default(),
-        }
-    }
-}
 
 impl eframe::App for MyApp {
-
-    
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        // return [0.0, 0.0, 0.0, 0.0];
         // Rgba::TRANSPARENT.to_array() // Alpha 值为 0.0，表示完全透明
         // Rgba::TRANSPARENT.to_array()
-        [0.0, 0.0, 0.0, 0.0]
+        let is_mouse_pass = IS_MOUSE_PASS
+            .get_or_init(|| Mutex::new(AtomicBool::new(true)))
+            .lock()
+            .expect("failed to lock");
+        let is_mouse_pass = is_mouse_pass.load(Ordering::SeqCst);
+        if is_mouse_pass {
+            return [0.0, 0.0, 0.0, 0.0];
+        } else {
+            return [0.5, 0.5, 0.5, 0.1];
+        }
     }
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
@@ -290,17 +281,6 @@ impl eframe::App for MyApp {
     // snip
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-
-        
-        // let ctx_ = CTX.set(&ctx);
-        
-        // fix_viewport_size(ctx);
-        // fix_transparent(ctx);
-
-        // if ctx.input(|i| i.key_pressed(egui::Key::F11)) {
-        //     ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
-        // }
-
         if ctx.input(|i| i.key_pressed(egui::Key::F2)) {
             let handle = IS_MOUSE_PASS
                 .get_or_init(|| Mutex::new(AtomicBool::new(true)))
@@ -322,20 +302,48 @@ impl eframe::App for MyApp {
         // get_cur_position(ctx, self);
 
         // test_transparent(ctx, self);
-
+        // render_white_overlay(ctx, self);
         render_sector(ctx, self);
+        render_sight(ctx, self);
     }
 }
 
+
+
+
+#[derive(Default)]
+struct TestApp {
+    fullscreen: bool,
+    transparent: bool,
+}
+
+impl eframe::App for TestApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        Area::new("fullscreen overlay".into())
+            .current_pos(egui::pos2(200.0, 200.0))
+            .movable(true)
+            .show(ctx, |ui| {
+                ui.label(
+                    egui::RichText::new("fullscreen overlay")
+                        .color(Color32::WHITE)
+                        .size(32.0),
+                );
+            });
+    }
+
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        egui::Rgba::TRANSPARENT.to_array()
+    }
+}
 pub fn test() {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_transparent(true)
             .with_fullscreen(true),
 
-            //The following two lines solve the problem
-            multisampling: 1,
-            renderer: eframe::Renderer::Glow,
+        //The following two lines solve the problem
+        multisampling: 1,
+        renderer: eframe::Renderer::Glow,
 
         ..Default::default()
     };
@@ -344,26 +352,5 @@ pub fn test() {
         options,
         Box::new(|_cc| Ok(Box::<TestApp>::default())),
     );
-    #[derive(Default)]
-    struct TestApp {
-        fullscreen: bool,
-        transparent: bool,
-    }
-
-    impl eframe::App for TestApp {
-        fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-            Area::new("fullscreen overlay".into())
-                .current_pos(egui::pos2(200.0, 200.0)) 
-                .movable(true) 
-                .show(ctx, |ui| {
-                    ui.label(egui::RichText::new("fullscreen overlay")
-                    .color(Color32::WHITE)
-                    .size(32.0),);
-                });
-        }
-
-        fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-            egui::Rgba::TRANSPARENT.to_array()
-        }
-    }
+   
 }

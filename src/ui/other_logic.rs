@@ -1,17 +1,16 @@
 use std::{
-    sync::{
-        atomic::{AtomicBool, Ordering},
-         Mutex,
-    },
-    thread,
+    collections::HashSet, sync::{
+        atomic::{AtomicBool, Ordering},Mutex, MutexGuard
+    }, thread, time::Duration
 };
 
-use eframe::egui::{self};
-use global_hotkey::{ GlobalHotKeyEvent};
+use eframe::egui::{self, };
 use rdev::{listen, EventType, Key};
 use tokio::{ time::sleep};
 
-use crate::ui::index::{IS_FIRST, IS_MOUSE_PASS, LAST_IS_MOUSE_PASS};
+use crate::ui::index::{IS_FIRST, IS_MOUSE_PASS, KEYRECORD, LAST_IS_MOUSE_PASS};
+
+
 
 pub struct KeyData {
     pub key: Key,
@@ -32,6 +31,7 @@ fn test_mouse_pass_change(bb: bool) {
 }
 
 pub fn check_first(ctx: &egui::Context, app: &mut crate::ui::index::MyApp) {
+    // println!("check first");
     let is_first_handle = IS_FIRST
         .get_or_init(|| Mutex::new(AtomicBool::new(true)))
         .lock();
@@ -54,13 +54,16 @@ pub fn check_first(ctx: &egui::Context, app: &mut crate::ui::index::MyApp) {
         // test_mouse_pass_change(false);
 
         tokio::spawn(async move {
-            sleep(tokio::time::Duration::from_millis(1500)).await;
+            sleep(tokio::time::Duration::from_millis(800)).await;
             let handle = IS_MOUSE_PASS
                 .get_or_init(|| Mutex::new(AtomicBool::new(true)))
                 .lock();
             let handle = match handle {
                 Ok(h) => h,
-                Err(e) => return,
+                Err(e) => {
+                    println!("IS_MOUSE_PASS error: {}", e) ;
+                    return;
+                },
             };
             handle.store(true, Ordering::SeqCst);
         });
@@ -71,20 +74,19 @@ pub fn check_first(ctx: &egui::Context, app: &mut crate::ui::index::MyApp) {
             .lock();
         let handle = match handle {
             Ok(h) => h,
-            Err(e) => return,
+            Err(e) => {
+                println!("IS_MOUSE_PASS error: {}", e) ;
+                return;
+            },
         };
         handle.store(false, Ordering::SeqCst);
+        // ctx.request_repaint_after(Duration::from_millis(850));
     }
 }
 
 pub fn key_listener() {
     // SHORTCUT_RX.set(rx).unwrap();
     let res = listen(move |event| {
-        // let name = event.name;
-        // match name {                                                                                                                                                  32mevent\x1b[0m = {}", name),
-        //     None => println!("🪵 [index.rs:25]~ token ~ \x1b[0;32mevent\x1b[0m = None")
-        // }
-        // println!("🪵 [index.rs:31]~ token ~ \x1b[0;32mevent.event_type\x1b[0m = {}", event.event_type);
 
         if event.event_type == EventType::KeyPress(Key::F2) {
             // println!("🪵 [index.rs:33]~ token ~ \x1b[0;32mF2\x1b[0m = ",);
@@ -108,6 +110,24 @@ pub fn key_listener() {
                 
             }
         }
+        if event.event_type == EventType::KeyPress(Key::ControlLeft) {
+            let mut key_record = KEYRECORD.get_or_init(|| Mutex::new(HashSet::new())).lock().expect("lock error");
+            key_record.insert(Key::ControlLeft);
+            check_ctrl_c(key_record);
+        }
+        if event.event_type == EventType::KeyRelease(Key::ControlLeft) {
+            let mut key_record = KEYRECORD.get_or_init(|| Mutex::new(HashSet::new())).lock().expect("lock error");
+            key_record.remove(&Key::ControlLeft);
+        }
+        if event.event_type == EventType::KeyPress(Key::KeyC) {
+            let mut key_record = KEYRECORD.get_or_init(|| Mutex::new(HashSet::new())).lock().expect("lock error");
+            key_record.insert(Key::KeyC);
+            check_ctrl_c(key_record);
+        }
+        if event.event_type == EventType::KeyRelease(Key::KeyC) {
+            let mut key_record = KEYRECORD.get_or_init(|| Mutex::new(HashSet::new())).lock().expect("lock error");
+            key_record.remove(&Key::KeyC);
+        }
     });
     match res {
         Ok(_) => {}
@@ -124,24 +144,30 @@ pub fn listen_mouse_pass_event(ctx: &egui::Context, app: &mut crate::ui::index::
         .lock();
     let handle = match handle {
         Ok(h) => h,
-        Err(e) => return,
+        Err(e) => {
+            println!("IS_MOUSE_PASS error: {}", e) ;
+            return;
+        },
     };
     let handle_last = LAST_IS_MOUSE_PASS
         .get_or_init(|| Mutex::new(AtomicBool::new(true)))
         .lock();
     let handle_last = match handle_last {
         Ok(h) => h,
-        Err(e) => return,
+        Err(e) => {
+            println!("IS_MOUSE_PASS error: {}", e) ;
+            return;
+        },
     };
     let is_mouse_pass = handle.load(Ordering::SeqCst);
     let last_is_mouse_pass = handle_last.load(Ordering::SeqCst);
 
     if is_mouse_pass && last_is_mouse_pass != is_mouse_pass {
         // println!("🪵 [index.rs:312]~ token ~ \x1b[0;32mlast_is_mouse_pass\x1b[0m = {}", last_is_mouse_pass);
-        println!(
-            "🪵 [index.rs:312]~ token ~ \x1b[0;32mis_mouse_pass\x1b[0m = {}",
-            is_mouse_pass
-        );
+        // println!(
+        //     "🪵 [index.rs:312]~ token ~ \x1b[0;32mis_mouse_pass\x1b[0m = {}",
+        //     is_mouse_pass
+        // );
         app.show_ui = true;
         ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(true));
         // ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::AlwaysOnTop));
@@ -150,10 +176,10 @@ pub fn listen_mouse_pass_event(ctx: &egui::Context, app: &mut crate::ui::index::
     }
     if !is_mouse_pass && last_is_mouse_pass != is_mouse_pass {
         // println!("🪵 [index.rs:312]~ token ~ \x1b[0;32mlast_is_mouse_pass\x1b[0m = {}", last_is_mouse_pass);
-        println!(
-            "🪵 [index.rs:312]~ token ~ \x1b[0;32mis_mouse_pass\x1b[0m = {}",
-            is_mouse_pass
-        );
+        // println!(
+        //     "🪵 [index.rs:312]~ token ~ \x1b[0;32mis_mouse_pass\x1b[0m = {}",
+        //     is_mouse_pass
+        // );
         app.show_ui = false;
         ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(false));
         // ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(
@@ -173,33 +199,24 @@ pub fn global_hk() {
     });
 }
 
-pub fn rev_gloabl_hk() {
-    println!(
-        "🪵 [other_logic.rs:207]~ token ~ \x1b[0;32mrev_gloabl_hk\x1b[0m = {}",
-        "rev_gloabl_hk"
-    );
-    let res = GlobalHotKeyEvent::receiver().try_recv();
-    let event = match res {
-        Ok(e) => e,
-        Err(e) => {
-            println!("glbal hotkey rev error : {}", e);
-            return;
-        }
-    };
-    println!("eveve{:?}", event);
 
-    // if let Ok(event) =  {
-    //     println!("{:?}", event);
-    // }
-}
 
 pub fn check_is_focus(ctx: &egui::Context,app: &mut crate::ui::index::MyApp){
-  // ctx.input(|i| i.is_focus_changed());
-  let is_focused = ctx.input(|i| i.raw.focused);
-  if is_focused {
-    // println!("is focused");
-  }else{
-    // println!("is not focused");
-    ctx.request_repaint_after_secs(0.015);
-  }
+    ctx.request_repaint_after(Duration::from_millis(16));
+
+//   // ctx.input(|i| i.is_focus_changed());
+//   let is_focused = ctx.input(|i| i.raw.focused);
+//   if is_focused {
+//     // println!("is focused");
+//   }else{
+//     // println!("is not focused");
+//     ctx.request_repaint_after(Duration::from_millis(16));
+
+//   }
+}
+
+fn check_ctrl_c(key_record:MutexGuard<'_,HashSet<rdev::Key>>){
+    if key_record.contains(&Key::KeyC) && key_record.contains(&Key::ControlLeft){
+        
+    }
 }

@@ -943,15 +943,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "crossbeam-channel"
-version = "0.5.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82b8f8f868b36967f9606790d1903570de9ceaf870a7bf9fbbd3016d636a2cb2"
-dependencies = [
- "crossbeam-utils",
-]
-
-[[package]]
 name = "crossbeam-deque"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1438,14 +1429,13 @@ dependencies = [
 
 [[package]]
 name = "fm8_hud"
-version = "0.1.7"
+version = "0.1.9"
 dependencies = [
  "chrono",
  "eframe",
  "enigo",
  "env_logger",
  "futures",
- "global-hotkey",
  "mime_guess",
  "percent-encoding",
  "rand",
@@ -1707,22 +1697,6 @@ dependencies = [
  "khronos_api",
  "log",
  "xml-rs",
-]
-
-[[package]]
-name = "global-hotkey"
-version = "0.6.4"
-source = "git+https://github.com/tauri-apps/global-hotkey?branch=renovate%2Feframe-0.x#5ff8e43daab98a0d8cf7063ecfbeaa1d7abfb3c2"
-dependencies = [
- "crossbeam-channel",
- "keyboard-types",
- "objc2 0.6.1",
- "objc2-app-kit 0.3.1",
- "once_cell",
- "thiserror 2.0.12",
- "windows-sys 0.59.0",
- "x11rb",
- "xkeysym",
 ]
 
 [[package]]
@@ -2439,17 +2413,6 @@ checksum = "1cfaf33c695fc6e08064efbc1f72ec937429614f25eef83af942d0e227c3a28f"
 dependencies = [
  "once_cell",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "keyboard-types"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b750dcadc39a09dbadd74e118f6dd6598df77fa01df0cfcdc52c28dece74528a"
-dependencies = [
- "bitflags 2.8.0",
- "serde",
- "unicode-segmentation",
 ]
 
 [[package]]

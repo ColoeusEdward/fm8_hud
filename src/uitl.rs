@@ -12,10 +12,6 @@ use std::process::{Command, Output};
 use std::error::Error;
 
 
-
-
-
-
 pub fn format_duration_extended(milliseconds: u64) -> String {
     let total_seconds = milliseconds / 1000;
     // let days = total_seconds / 86400;

@@ -4,9 +4,9 @@ use eframe::{
     epaint::CornerRadiusF32,
 };
 
-use crate::{ui::index::{MyApp, SECTORID}};
+use crate::{ui::index::{MyApp2, SECTORID}};
 
-pub fn render_sector(ctx: &egui::Context, app: &mut MyApp) {
+pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
     let res = Area::new(*SECTORID.get().unwrap())
         .current_pos(egui::pos2(app.sector_pos.x, app.sector_pos.y)) // 位置, 400.0 + app.yoffset)) // 位置
         .movable(true) //
@@ -68,7 +68,7 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp) {
     if res.dragged() {}
 }
 
-pub fn render_white_overlay(ctx: &egui::Context, app: &mut MyApp) {
+pub fn render_white_overlay(ctx: &egui::Context, app: &mut MyApp2) {
     Area::new("white_overlay".into())
         .fixed_pos(egui::pos2(0.0, 0.0))
         .show(ctx, |ui| {
@@ -95,7 +95,7 @@ pub fn render_white_overlay(ctx: &egui::Context, app: &mut MyApp) {
         });
 }
 
-pub fn test_transparent(ctx: &egui::Context, app: &mut MyApp) {
+pub fn test_transparent(ctx: &egui::Context, app: &mut MyApp2) {
     ctx.send_viewport_cmd(ViewportCommand::Transparent(true));
     egui::CentralPanel::default()
         .frame(egui::Frame::default().fill(Color32::TRANSPARENT))
@@ -114,7 +114,7 @@ pub fn test_transparent(ctx: &egui::Context, app: &mut MyApp) {
         });
 }
 
-pub fn render_sight(ctx: &egui::Context, app: &mut MyApp) {
+pub fn render_sight(ctx: &egui::Context, app: &mut MyApp2) {
     let pos = if app.sight_pos.x == 0.0 && app.sight_pos.y == 0.0 {
         let pp = get_center_pos(ctx);
         app.sight_pos = pp;
@@ -150,5 +150,6 @@ pub fn get_center_pos(ctx: &egui::Context) -> egui::Pos2 {
     // 获取当前 egui 视窗的尺寸
     let screen_rect = ctx.screen_rect();
     let screen_center = screen_rect.center();
+    println!("🪵 [sector.rs:152]~ token ~ \x1b[0;32mscreen_center\x1b[0m = {} {}", screen_center.x, screen_center.y);
     return screen_center;
 }

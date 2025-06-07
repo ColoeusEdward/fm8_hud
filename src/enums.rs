@@ -51,9 +51,13 @@ impl Default for MyApp {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TeleData {
     pub speed: f32,
+    pub close: bool,
 }
 impl Default for TeleData {
     fn default() -> Self {
-        Self { speed: 0.0 }
+        Self { 
+            speed: 0.0,
+            close: false 
+        }
     }
 }

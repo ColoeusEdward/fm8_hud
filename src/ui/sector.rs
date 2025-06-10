@@ -1,14 +1,19 @@
-
-use std::sync::{atomic::{AtomicBool, Ordering}, Mutex};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Mutex,
+};
 
 use eframe::{
-    egui::{self, Area, Color32, Layout,  UiBuilder, ViewportCommand},
+    egui::{self, Area, Color32, Layout, UiBuilder, ViewportCommand},
     epaint::CornerRadiusF32,
 };
 
 use crate::ui::index::{MyApp2, IS_MOUSE_PASS, SECTORID};
 
 pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
+    if !app.show_state.show_sector {
+        return;
+    }
     let res = Area::new(*SECTORID.get().unwrap())
         .current_pos(egui::pos2(app.sector_pos.x, app.sector_pos.y)) // 位置, 400.0 + app.yoffset)) // 位置
         .movable(true) //
@@ -18,7 +23,13 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
             // 这个文本会直接显示在透明的 viewport 上，没有任何背景
 
             // 定义圆角矩形的尺寸
-            let desired_size = egui::vec2(210.0, 40.0);
+            let len = app.setting_data.sector_len.parse::<f32>();
+            let len = match len {
+                Ok(len) => len,
+                Err(e) => app.setting_data.sector_base_len,
+            };
+            let scale_to_base = len / app.setting_data.sector_base_len;
+            let desired_size = egui::vec2(len, len / app.setting_data.sector_scale);
             // 分配一个精确大小的区域，这将是我们绘制矩形的边界
             let (rect, _response) = ui.allocate_exact_size(desired_size, egui::Sense::hover());
 
@@ -44,22 +55,22 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
                 ui.with_layout(
                     egui::Layout::centered_and_justified(egui::Direction::TopDown),
                     |ui| {
-                        ui.add_space(5.0); // 顶部一点空间
-                                           // ui.label(egui::RichText::new("Area 中的圆角矩形").color(Color32::WHITE).size(22.0));
+                        ui.add_space(5.0 * scale_to_base); // 顶部一点空间
+                                                           // ui.label(egui::RichText::new("Area 中的圆角矩形").color(Color32::WHITE).size(22.0));
                         let lb = ui.label(
                             egui::RichText::new("01:00:00")
                                 .family(egui::FontFamily::Proportional)
                                 .color(Color32::WHITE)
-                                .size(24.0),
+                                .size(24.0 * scale_to_base),
                         );
                         if lb.dragged() {
                             app.sector_pos += lb.drag_delta();
                             // println!("🪵 [sector.rs:65]~ token ~ \x1b[0;32msector_pos\x1b[0m = {} {}", app.sector_pos.x,app.sector_pos.y,);
                         }
-                        ui.add_space(5.0); // 文本和按钮之间的空间
-                                           // if ui.button("点击我").clicked() {
-                                           //     println!("按钮在 Area 中被点击了!");
-                                           // }
+                        ui.add_space(5.0 * scale_to_base); // 文本和按钮之间的空间
+                                                           // if ui.button("点击我").clicked() {
+                                                           //     println!("按钮在 Area 中被点击了!");
+                                                           // }
                     },
                 );
             });
@@ -117,12 +128,20 @@ pub fn test_transparent(ctx: &egui::Context, app: &mut MyApp2) {
 }
 
 pub fn render_sight(ctx: &egui::Context, app: &mut MyApp2) {
+    if !app.show_state.show_sight {
+        return;
+    }
     let pos = if app.sight_pos.x == 0.0 && app.sight_pos.y == 0.0 {
         let pp = get_center_pos(ctx);
         app.sight_pos = pp;
         pp
-    }else{
+    } else {
         app.sight_pos
+    };
+    let size = app.setting_data.sight_len.parse::<f32>();
+    let size = match size {
+        Ok(s) => s,
+        Err(e) => app.setting_data.sight_base_len,
     };
     Area::new("sight".into())
         .current_pos(pos)
@@ -135,7 +154,7 @@ pub fn render_sight(ctx: &egui::Context, app: &mut MyApp2) {
                     // 你可以在这里添加任何你想要居中的内容
                     let lb = ui.label(
                         egui::RichText::new("o")
-                            .font(egui::FontId::monospace(14.0)) // 调整字体大小
+                            .font(egui::FontId::monospace(size)) // 调整字体大小
                             .color(Color32::from_hex("#00FFFF").expect("hex error")), // 设置文字颜色
                     );
                     if lb.dragged() {
@@ -148,8 +167,12 @@ pub fn render_sight(ctx: &egui::Context, app: &mut MyApp2) {
         });
 }
 
-pub fn render_cross_line(ctx: &egui::Context){
-    let is_mouse_pass= IS_MOUSE_PASS.get_or_init(|| Mutex::new(AtomicBool::new(true))).lock().unwrap().load(Ordering::SeqCst);
+pub fn render_cross_line(ctx: &egui::Context) {
+    let is_mouse_pass = IS_MOUSE_PASS
+        .get_or_init(|| Mutex::new(AtomicBool::new(true)))
+        .lock()
+        .unwrap()
+        .load(Ordering::SeqCst);
     if is_mouse_pass {
         return;
     }
@@ -166,7 +189,7 @@ pub fn render_cross_line(ctx: &egui::Context){
 
     let line_color = egui::Color32::from_rgba_premultiplied(0, 0, 0, 80);
     let thickness = 1.0;
-    let len = width/2.0; // 十字线长度（从中心往两边）
+    let len = width / 2.0; // 十字线长度（从中心往两边）
 
     // 画水平线
     painter.line_segment(
@@ -196,16 +219,23 @@ pub fn get_center_pos(ctx: &egui::Context) -> egui::Pos2 {
     // 获取当前 egui 视窗的尺寸
     let screen_rect = ctx.screen_rect();
     let screen_center = screen_rect.center();
-    println!("🪵 [sector.rs:152]~ token ~ \x1b[0;32mscreen_center\x1b[0m = {} {}", screen_center.x, screen_center.y);
+    println!(
+        "🪵 [sector.rs:152]~ token ~ \x1b[0;32mscreen_center\x1b[0m = {} {}",
+        screen_center.x, screen_center.y
+    );
     return screen_center;
 }
 
-pub fn render_bg(ctx: &egui::Context, ui: &mut egui::Ui,size:[f32; 2],add_contents: impl FnOnce(&mut egui::Ui) -> ()) {
+pub fn render_bg(
+    ctx: &egui::Context,
+    ui: &mut egui::Ui,
+    size: [f32; 2],
+    add_contents: impl FnOnce(&mut egui::Ui) -> (),
+) {
     // 定义圆角矩形的尺寸
     let desired_size = egui::vec2(size[0], size[1]);
     // 分配一个精确大小的区域，这将是我们绘制矩形的边界
-    let (rect, _response) =
-        ui.allocate_exact_size(desired_size, egui::Sense::hover());
+    let (rect, _response) = ui.allocate_exact_size(desired_size, egui::Sense::hover());
 
     // 获取 painter
     let painter = ui.painter();

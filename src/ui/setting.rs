@@ -5,8 +5,7 @@ use std::sync::{
 
 use eframe::{
     egui::{
-        self, popup_below_widget, show_tooltip, show_tooltip_at_pointer, Align, Area, Color32,
-        Frame, Id, Label, Layout, PopupCloseBehavior, Pos2, RichText, UiBuilder,
+        self, popup_below_widget, show_tooltip, show_tooltip_at_pointer, Align, Area, Color32, Frame, Id, Label, Layout, PopupCloseBehavior, Pos2, RichText, TextEdit, UiBuilder
     },
     epaint::CornerRadiusF32,
 };
@@ -66,13 +65,13 @@ pub fn render_setting(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2) {
                                             .color(egui::Color32::WHITE)
                                             .font(egui::FontId::proportional(14.0)),
                                     );
-                                    ui.text_edit_singleline(&mut app.setting_data.port);
+                                    ui.add(TextEdit::singleline(&mut app.setting_data.port));
                                 });
 
                                 ui.separator();
 
                                 ui.horizontal(|ui| {
-                                    ui.add_space(320.0);
+                                    ui.add_space(340.0);
 
                                     // if ui.button("提交").clicked() {
                                     //     println!("游戏遥测IP: {}", app.setting_data.ip);
@@ -154,7 +153,7 @@ pub fn render_info(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, ui: 
 }
 
 pub fn render_complist(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, ui: &mut egui::Ui) {
-    let btn = ui.button("⛦ 组件");
+    let btn = ui.button("☉ 组件");
     if btn.clicked() {
         let show_set = app.show_state.show_complist;
         app.show_state.show_complist = !show_set;
@@ -172,19 +171,56 @@ pub fn render_complist(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, 
 
             // 在这个 Frame 中绘制内容
             frame.show(ui, |ui| {
-                ui.heading("说明");
+                ui.heading("组件选项");
                 ui.separator();
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut app.show_state.show_sector, RichText::new("赛段计时")
+                    .color(egui::Color32::WHITE)
+                    .font(egui::FontId::proportional(14.0)),);
+                    // ui.add_space(5.0);
+                    // if ui.button("↑").clicked() {
 
-                ui.label(
-                    RichText::new(r"F2          切换编辑状态, 编辑状态可拖动组件")
-                        .color(egui::Color32::WHITE)
-                        .font(egui::FontId::monospace(14.0)),
-                );
-                ui.label(
-                    RichText::new(r"Ctrl+Q      退出程序")
-                        .color(egui::Color32::WHITE)
-                        .font(egui::FontId::monospace(14.0)),
-                );
+                    // }
+                    // if ui.button("↓").clicked() {
+
+                    // }
+                    // if ui.button("←").clicked() {
+                        
+                    // }
+                    // if ui.button("→").clicked() {
+                        
+                    // }
+                    ui.add_space(40.0);
+                    ui.label(RichText::new("长度")
+                    .color(egui::Color32::WHITE)
+                    .font(egui::FontId::proportional(14.0)));
+                    ui.add(TextEdit::singleline(&mut app.setting_data.sector_len).desired_width(80.0));
+                    
+                });
+
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut app.show_state.show_sight, RichText::new("准星")
+                    .color(egui::Color32::WHITE)
+                    .font(egui::FontId::proportional(14.0)),);
+                    // ui.add_space(5.0);
+                    // if ui.button("↑").clicked() {
+
+                    // }
+                    // if ui.button("↓").clicked() {
+
+                    // }
+                    // if ui.button("←").clicked() {
+                        
+                    // }
+                    // if ui.button("→").clicked() {
+                        
+                    // }
+                    ui.add_space(68.0);
+                    ui.label(RichText::new("长度")
+                    .color(egui::Color32::WHITE)
+                    .font(egui::FontId::proportional(14.0)));
+                    ui.add(TextEdit::singleline(&mut app.setting_data.sight_len).desired_width(80.0));
+                });
 
                 ui.separator();
 

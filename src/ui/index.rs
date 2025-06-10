@@ -318,8 +318,8 @@ impl eframe::App for MyApp2 {
         storage.set_string("my_custom_label_text", "ee".to_owned());
         // storage.set_string("MyApp", serde_json::to_string(self).unwrap());
         eframe::set_value(storage, eframe::APP_KEY, self);
-        println!("🪵 [index.rs:320]~ token ~ \x1b[0;32mself\x1b[0m = {} {}", self.sector_pos.x,self.sector_pos.y);
-        println!("🪵 [index.rs:320]~ token ~ \x1b[0;32mself\x1b[0m = {} {}", self.sight_pos.x,self.sight_pos.y);
+        // println!("🪵 [index.rs:320]~ token ~ \x1b[0;32mself\x1b[0m = {} {}", self.sector_pos.x,self.sector_pos.y);
+        // println!("🪵 [index.rs:320]~ token ~ \x1b[0;32mself\x1b[0m = {} {}", self.sight_pos.x,self.sight_pos.y);
     }
     // snip
 

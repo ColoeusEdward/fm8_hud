@@ -6,6 +6,8 @@
 // use utf8_slice::slice;
 use tokio::{self};
 
+use crate::config::init_track_data_map;
+
 
 // use std::thread::sleep;
 // use std::time::Duration;
@@ -18,7 +20,7 @@ mod config;
 
 #[tokio::main]
 async fn main() {
-    
+    init_track_data_map();
     let res = ui::index::main();
     // match res {
     //     Ok(e) => e,

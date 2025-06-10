@@ -1,5 +1,4 @@
-
-
+use std::{collections::BTreeMap, sync::{Mutex, OnceLock}};
 
 pub static TELEMETRY_FIELDS: &[TelemetryDataField] = &[
     TelemetryDataField { name: "IsRaceOn", type_name: "S32", offset: 0, bytes: 4, description: "= 1 when race is on. = 0 when in menus/race stopped." },
@@ -103,3 +102,93 @@ pub struct TelemetryDataField {
     pub bytes: usize,
     pub description: &'static str,
 }
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+pub struct TrackData {
+    pub length: u16,
+    pub s1_end: u16,
+    pub s2_end: u16,
+}
+
+pub static TRACK_DATA_MAP: OnceLock<Mutex<BTreeMap<u16, TrackData>>> = OnceLock::new();
+pub static DEFAULT_TRACK_DATA: TrackData = TrackData { length: 5000, s1_end: 1700, s2_end: 3350 };
+
+
+pub fn init_track_data_map(){
+    let mut track_data_map = TRACK_DATA_MAP.get_or_init(|| Mutex::new(BTreeMap::new())).lock().unwrap();
+    track_data_map.insert(0, TrackData{length: 0, s1_end: 0, s2_end: 0});
+    // Populate the BTreeMap with your data
+    track_data_map.insert(1660, TrackData { length: 1642, s1_end: 558, s2_end: 1100 });
+    track_data_map.insert(1661, TrackData { length: 1722, s1_end: 585, s2_end: 1154 });
+    track_data_map.insert(1663, TrackData { length: 1722, s1_end: 585, s2_end: 1154 });
+    track_data_map.insert(860, TrackData { length: 3915, s1_end: 1331, s2_end: 2623 });
+    track_data_map.insert(861, TrackData { length: 1944, s1_end: 661, s2_end: 1302 });
+    track_data_map.insert(110, TrackData { length: 4657, s1_end: 1583, s2_end: 3120 });
+    track_data_map.insert(111, TrackData { length: 3071, s1_end: 1044, s2_end: 2058 });
+    track_data_map.insert(113, TrackData { length: 2997, s1_end: 1019, s2_end: 2008 });
+    track_data_map.insert(530, TrackData { length: 7004, s1_end: 2381, s2_end: 4693 });
+    track_data_map.insert(840, TrackData { length: 5777, s1_end: 1964, s2_end: 3871 });
+    track_data_map.insert(841, TrackData { length: 4023, s1_end: 1368, s2_end: 2695 });
+    track_data_map.insert(1630, TrackData { length: 3734, s1_end: 1270, s2_end: 2502 });
+    track_data_map.insert(1631, TrackData { length: 2623, s1_end: 892, s2_end: 1757 });
+    track_data_map.insert(1632, TrackData { length: 3734, s1_end: 1270, s2_end: 2502 });
+    track_data_map.insert(1640, TrackData { length: 4281, s1_end: 1456, s2_end: 2868 });
+    track_data_map.insert(1641, TrackData { length: 3315, s1_end: 1127, s2_end: 2221 });
+    track_data_map.insert(1643, TrackData { length: 3315, s1_end: 1127, s2_end: 2221 });
+    track_data_map.insert(250, TrackData { length: 4574, s1_end: 1555, s2_end: 3065 });
+    track_data_map.insert(251, TrackData { length: 3692, s1_end: 1255, s2_end: 2474 });
+    track_data_map.insert(252, TrackData { length: 2638, s1_end: 897, s2_end: 1767 });
+    track_data_map.insert(1110, TrackData { length: 2414, s1_end: 821, s2_end: 1617 });
+    track_data_map.insert(1111, TrackData { length: 3556, s1_end: 1209, s2_end: 2383 });
+    track_data_map.insert(231, TrackData { length: 4023, s1_end: 1368, s2_end: 2695 });
+    track_data_map.insert(232, TrackData { length: 3925, s1_end: 1335, s2_end: 2630 });
+    track_data_map.insert(1590, TrackData { length: 4529, s1_end: 1540, s2_end: 3034 });
+    track_data_map.insert(100, TrackData { length: 13626, s1_end: 4633, s2_end: 9129 });
+    track_data_map.insert(101, TrackData { length: 13535, s1_end: 4602, s2_end: 9068 });
+    track_data_map.insert(880, TrackData { length: 2414, s1_end: 821, s2_end: 1617 });
+    track_data_map.insert(882, TrackData { length: 2366, s1_end: 804, s2_end: 1585 });
+    track_data_map.insert(883, TrackData { length: 2414, s1_end: 821, s2_end: 1617 });
+    track_data_map.insert(67, TrackData { length: 4812, s1_end: 1636, s2_end: 3224 });
+    track_data_map.insert(68, TrackData { length: 1851, s1_end: 629, s2_end: 1240 });
+    track_data_map.insert(70, TrackData { length: 1851, s1_end: 629, s2_end: 1240 });
+    track_data_map.insert(16, TrackData { length: 4088, s1_end: 1390, s2_end: 2739 });
+    track_data_map.insert(17, TrackData { length: 2881, s1_end: 980, s2_end: 1930 });
+    track_data_map.insert(1450, TrackData { length: 3622, s1_end: 1231, s2_end: 2427 });
+    track_data_map.insert(1452, TrackData { length: 2817, s1_end: 958, s2_end: 1887 });
+    track_data_map.insert(540, TrackData { length: 6213, s1_end: 2112, s2_end: 4163 });
+    track_data_map.insert(35, TrackData { length: 5246, s1_end: 1784, s2_end: 3515 });
+    track_data_map.insert(36, TrackData { length: 2575, s1_end: 876, s2_end: 1725 });
+    track_data_map.insert(31, TrackData { length: 25378, s1_end: 8629, s2_end: 17003 });
+    track_data_map.insert(32, TrackData { length: 20830, s1_end: 7082, s2_end: 13956 });
+    track_data_map.insert(33, TrackData { length: 5148, s1_end: 1750, s2_end: 3449 });
+    track_data_map.insert(34, TrackData { length: 3629, s1_end: 1234, s2_end: 2431 });
+    track_data_map.insert(3, TrackData { length: 6515, s1_end: 2215, s2_end: 4365 });
+    track_data_map.insert(5, TrackData { length: 3520, s1_end: 1197, s2_end: 2358 });
+    track_data_map.insert(40, TrackData { length: 5954, s1_end: 2024, s2_end: 3989 });
+    track_data_map.insert(42, TrackData { length: 3219, s1_end: 1094, s2_end: 2157 });
+    track_data_map.insert(21, TrackData { length: 5891, s1_end: 2003, s2_end: 3947 });
+    track_data_map.insert(22, TrackData { length: 2639, s1_end: 897, s2_end: 1768 });
+    track_data_map.insert(23, TrackData { length: 2979, s1_end: 1013, s2_end: 1996 });
+    track_data_map.insert(1620, TrackData { length: 4474, s1_end: 1521, s2_end: 2998 });
+    track_data_map.insert(1621, TrackData { length: 3122, s1_end: 1061, s2_end: 2092 });
+    track_data_map.insert(1622, TrackData { length: 4474, s1_end: 1521, s2_end: 2998 });
+    track_data_map.insert(1623, TrackData { length: 3122, s1_end: 1061, s2_end: 2092 });
+    track_data_map.insert(1624, TrackData { length: 3927, s1_end: 1335, s2_end: 2631 });
+    track_data_map.insert(37, TrackData { length: 5809, s1_end: 1975, s2_end: 3892 });
+    track_data_map.insert(38, TrackData { length: 2253, s1_end: 766, s2_end: 1510 });
+    track_data_map.insert(990, TrackData { length: 5260, s1_end: 1788, s2_end: 3524 });
+    track_data_map.insert(991, TrackData { length: 3620, s1_end: 1231, s2_end: 2425 });
+    track_data_map.insert(992, TrackData { length: 2660, s1_end: 904, s2_end: 1782 });
+    track_data_map.insert(995, TrackData { length: 6598, s1_end: 2243, s2_end: 4421 });
+    track_data_map.insert(996, TrackData { length: 6759, s1_end: 2298, s2_end: 4529 });
+    track_data_map.insert(870, TrackData { length: 5552, s1_end: 1888, s2_end: 3720 });
+    track_data_map.insert(873, TrackData { length: 3943, s1_end: 1341, s2_end: 2642 });
+    track_data_map.insert(0, TrackData { length: 3602, s1_end: 1225, s2_end: 2413 });
+    track_data_map.insert(1, TrackData { length: 2961, s1_end: 1007, s2_end: 1984 });
+    track_data_map.insert(510, TrackData { length: 5280, s1_end: 1795, s2_end: 3538 });
+    track_data_map.insert(511, TrackData { length: 3000, s1_end: 1020, s2_end: 2010 });
+    track_data_map.insert(512, TrackData { length: 2190, s1_end: 745, s2_end: 1467 });
+    track_data_map.insert(513, TrackData { length: 2290, s1_end: 779, s2_end: 1534 });
+    track_data_map.insert(78, TrackData { length: 16480, s1_end: 5603, s2_end: 11042 });
+}
+

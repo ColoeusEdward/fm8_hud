@@ -88,14 +88,30 @@ impl Default for ShowState {
 
 pub struct  SettingData{
     pub ip: String,
-    pub port: String
+    pub port: String,
+    pub sector_len: String,
+    pub sector_scale: f32,
+    pub sector_base_len: f32,
+
+    pub sight_len: String,
+    pub sight_scale:f32,
+    pub sight_base_len: f32,
 }
 
 impl Default for SettingData {
     fn default() -> Self {
         Self { 
            ip: "127.0.0.1".to_string(),
-           port: "8000".to_string()
+           port: "8000".to_string(),
+
+           sector_len: "210".to_string(),
+           sector_scale:5.25,
+           sector_base_len: 210.0,
+
+           sight_len: "14".to_string(),
+           sight_scale: 1.0,
+           sight_base_len: 14.0,
+
         }
     }
 }

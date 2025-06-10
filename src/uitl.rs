@@ -1,7 +1,7 @@
 // use std::str::FromStr;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
-use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::fs::{self, File};
+use std::io::{self, BufRead, BufReader};
 use std::io::{Read, Seek, SeekFrom};
 use std::os::raw::c_ulong;
 use std::path::Path;
@@ -343,3 +343,33 @@ pub fn read_fn_map(item: TelemetryDataField, buf: Vec<u8>) -> f32 {
   }
 }
 
+
+pub fn get_local_data_list() -> Result<Vec<String>, io::Error> {
+    let mut name_list: Vec<String> = Vec::new();
+    for entry in fs::read_dir(".")? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_file() {
+            if let Some(file_name) = path.file_name() {
+                if let Some(name_str) = file_name.to_str() {
+                    if name_str.contains("fm") && name_str.contains(".data") {
+                        name_list.push(name_str.to_string());
+                    }
+                }
+            }
+        }
+    }
+    Ok(name_list)
+}
+
+pub fn format_milliseconds_to_mmssms(total_ms: u32) -> String {
+    let minutes = total_ms / (1000 * 60); // 1分钟 = 60秒 = 60000毫秒
+    let remaining_ms_after_minutes = total_ms % (1000 * 60);
+
+    let seconds = remaining_ms_after_minutes / 1000; // 1秒 = 1000毫秒
+    let milliseconds = remaining_ms_after_minutes % 1000;
+
+    // 使用格式化宏来确保两位数的分钟和秒，三位数的毫秒（如果需要前导零）
+    format!("{:02}:{:02}:{:03}", minutes, seconds, milliseconds)
+}

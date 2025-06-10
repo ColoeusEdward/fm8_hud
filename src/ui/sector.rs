@@ -1,19 +1,52 @@
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Mutex,
-};
+use std::{collections::BTreeMap, sync::{
+    atomic::{AtomicBool, Ordering}, mpsc, Mutex
+}};
 
 use eframe::{
     egui::{self, Area, Color32, Layout, UiBuilder, ViewportCommand},
     epaint::CornerRadiusF32,
 };
 
-use crate::ui::index::{MyApp2, IS_MOUSE_PASS, SECTORID};
+use crate::{ui::index::{MyApp2, IS_MOUSE_PASS, SECTORID, TELE_DATA_RX}, uitl::format_milliseconds_to_mmssms};
 
 pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
     if !app.show_state.show_sector {
         return;
     }
+    let tele_rx = TELE_DATA_RX.get().unwrap().lock().unwrap();
+    let tele_data = match tele_rx.try_recv() {
+        Ok(data) => {
+            // println!("[Receiver] 收到 (非阻塞): {}", msg.close);
+           data 
+        }
+        Err(mpsc::TryRecvError::Empty) => {
+            BTreeMap::new()
+            // 通道为空，没有新消息
+            // println!("[Receiver] 通道为空，执行其他工作...");
+            // thread::sleep(Duration::from_millis(200)); // 模拟做其他工作
+        }
+        Err(mpsc::TryRecvError::Disconnected) => {
+            BTreeMap::new()
+            // 所有发送端都已关闭，通道已断开
+            // println!("[Receiver] 所有发送端已断开，退出接收循环。");
+        }
+    };
+    let cur_lap_time = tele_data.get("CurrentLap");
+    let cur_lap_time = match cur_lap_time {
+        Some(cur_lap_time) => cur_lap_time*1000.0,
+        None => 0.0,
+    } as u32;
+    let cur_lap_time = format_milliseconds_to_mmssms(cur_lap_time);
+
+    let is_race_on = tele_data.get("IsRaceOn");
+    let is_race_on = match is_race_on {
+        Some(is_race_on) => is_race_on,
+        None => &0.0,
+    }.clone() as i32;
+    if is_race_on == 0 {
+        return;
+    }
+    // println!("🪵 [sector.rs:17]~ token ~ \x1b[0;32mtele_data\x1b[0m = {}", is_race_on);
     let res = Area::new(*SECTORID.get().unwrap())
         .current_pos(egui::pos2(app.sector_pos.x, app.sector_pos.y)) // 位置, 400.0 + app.yoffset)) // 位置
         .movable(true) //
@@ -55,13 +88,13 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
                 ui.with_layout(
                     egui::Layout::centered_and_justified(egui::Direction::TopDown),
                     |ui| {
-                        ui.add_space(5.0 * scale_to_base); // 顶部一点空间
+                        ui.add_space(7.0 * scale_to_base); // 顶部一点空间
                                                            // ui.label(egui::RichText::new("Area 中的圆角矩形").color(Color32::WHITE).size(22.0));
                         let lb = ui.label(
-                            egui::RichText::new("01:00:00")
+                            egui::RichText::new(cur_lap_time)
                                 .family(egui::FontFamily::Proportional)
                                 .color(Color32::WHITE)
-                                .size(24.0 * scale_to_base),
+                                .size(20.0 * scale_to_base),
                         );
                         if lb.dragged() {
                             app.sector_pos += lb.drag_delta();

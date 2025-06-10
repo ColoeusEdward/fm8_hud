@@ -13,8 +13,8 @@ use tokio::time::{sleep, Duration};
 use crate::{
     config::TELEMETRY_FIELDS,
     enums::ErrorData,
-    ui::index::{MyApp2, ERROR_TX},
-    uitl::{is_port_available, load_raw_bytes_from_file, read_fn_map, save_raw_bytes_to_file},
+    ui::index::{MyApp2, ERROR_TX, TELE_DATA_TX},
+    uitl::{get_local_data_list, is_port_available, load_raw_bytes_from_file, read_fn_map, save_raw_bytes_to_file},
 };
 
 pub static ISSTART: OnceLock<AtomicUsize> = OnceLock::new();
@@ -86,14 +86,20 @@ pub fn init_udp(app: &mut MyApp2) -> Result<(), String> {
         // let mut buffer = [0u8; 1024]; // Adjust buffer size as needed
         let mut buffer = [0u8; 1500]; // Typical MTU for Ethernet
                                       // let (tx, _) = mpsc::channel::<UdpDataPayload>(1024); // Buffer size 1024
-        let name_list = ["CurrentEngineRpm", "Power", "Torque"];
+        let name_list = ["IsRaceOn","CurrentEngineRpm","CarOrdinal","CarClass", "CarPerformanceIndex","Speed","Power", "Torque","TireTempFrontLeft","TireTempFrontRight","TireTempRearLeft","TireTempRearRight","Boost","Fuel","DistanceTraveled","BestLap","LastLap","CurrentLap","CurrentRaceTime","LapNumber","RacePosition","Accel","Brake","Gear","Steer","TireWearFrontLeft","TireWearFrontRight","TireWearRearLeft","TireWearRearRight","TrackOrdinal"];
+        // let field_map:BTreeMap<String, > = BTreeMap::new();
         let field_vec = TELEMETRY_FIELDS
             .iter()
             .filter(|item| name_list.contains(&item.name))
             .collect::<Vec<_>>();
+
+        let mut data_map:BTreeMap<String, f32> = BTreeMap::new();
+        name_list.iter().for_each(|s| {data_map.insert(s.to_string(), 0.0);});
+
         let pcdata = POWER_CHART_DATA.get_or_init(|| Arc::new(Mutex::new(BTreeMap::new())));
         let todata = TORQUE_CHART_DATA.get_or_init(|| Arc::new(Mutex::new(BTreeMap::new())));
         reset_data();
+        let tele_tx = TELE_DATA_TX.get().unwrap();
         // let pcdata =  POWER_CHART_DATA2.get_or_init(|| Arc::new(Mutex::new(Vec::new())));
         // let todata = TORQUE_CHART_DATA2.get_or_init(|| Arc::new(Mutex::new(Vec::new())));
         while thread_running_flag.load(Ordering::SeqCst) {
@@ -113,7 +119,7 @@ pub fn init_udp(app: &mut MyApp2) -> Result<(), String> {
             }
 
             match socket.recv_from(&mut buffer) {
-                Ok((_size, _)) => {
+                Ok((bytes_received, _)) => {
                     save_temp_data(buffer).unwrap();
 
                     // // Emit event to the frontend
@@ -125,7 +131,6 @@ pub fn init_udp(app: &mut MyApp2) -> Result<(), String> {
                     // win.emit("udp_data",  payload).unwrap();
 
                     // let mut data_vec: Vec<UdpDataItem> = Vec::new();
-                    let mut vv: Vec<f32> = Vec::new(); //rpm,power,,torque
                                                        // let mut vv: Vec<i32> = Vec::new();//rpm,power,,torque
 
                     for item in field_vec.iter() {
@@ -141,13 +146,12 @@ pub fn init_udp(app: &mut MyApp2) -> Result<(), String> {
                         //         0
                         //     }
                         // };
-                        vv.push(val);
+                        // vv.push(val);
+                        data_map.insert(item.name.to_string(), val);
                     }
-                    if vv[1] > 0.0 {
-                        build_chart_data(&pcdata, &todata, &vv);
-                    }
+                    tele_tx.lock().unwrap().send(data_map.clone()).unwrap();
+                    
 
-                    // pcdata.lock().unwrap().insert(vv[0], [vv[0], vv[1]].to_vec());
                     // todata.lock().unwrap().insert(vv[0], [vv[0], vv[2]].to_vec());
                     // println!(
                     //     "🪵 [udp.rs:118]~ token ~ \x1b[0;32mdata_vec\x1b[0m = {}",
@@ -422,24 +426,7 @@ fn build_chart_data(
     } // todata_guard 在这里离开作用域并释放锁
 }
 
-fn get_local_data_list() -> Result<Vec<String>, io::Error> {
-    let mut name_list: Vec<String> = Vec::new();
-    for entry in fs::read_dir(".")? {
-        let entry = entry?;
-        let path = entry.path();
 
-        if path.is_file() {
-            if let Some(file_name) = path.file_name() {
-                if let Some(name_str) = file_name.to_str() {
-                    if name_str.contains("fm") && name_str.contains(".data") {
-                        name_list.push(name_str.to_string());
-                    }
-                }
-            }
-        }
-    }
-    Ok(name_list)
-}
 
 pub fn calc_max_area_rpm_zone(rpm_length: i32) {
     // println!("🪵 [udp.rs:517]~ token ~ \x1b[0;32mrpm_length\x1b[0m = {}", rpm_length);

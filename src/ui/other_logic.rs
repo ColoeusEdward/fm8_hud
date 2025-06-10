@@ -1,5 +1,5 @@
 use std::{
-    collections::HashSet,
+    collections::{BTreeMap, HashSet},
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::{self},
@@ -21,8 +21,7 @@ use crate::{
     controllers::udp::{init_udp, THREAD_RUNINNG_FLAG},
     enums::TeleData,
     ui::index::{
-        MyApp2, ERROR_RX, ERROR_SHOW_FLAG, IS_FIRST, IS_MOUSE_PASS, KEYRECORD, LAST_IS_MOUSE_PASS,
-        RESTART_UDP_FLAG, RXHOLDER, TXHOLDER,
+        MyApp2, ERROR_RX, ERROR_SHOW_FLAG, IS_FIRST, IS_MOUSE_PASS, KEYRECORD, LAST_IS_MOUSE_PASS, RESTART_UDP_FLAG, RXHOLDER, TELE_DATA_RX, TXHOLDER
     },
 };
 
@@ -308,6 +307,7 @@ pub fn check_udp_run(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2) {
     let running = THREAD_RUNINNG_FLAG.get_or_init(|| AtomicBool::new(false));
     let restart_udp_flag = RESTART_UDP_FLAG.get_or_init(|| AtomicBool::new(true));
     if !running.load(Ordering::SeqCst) && restart_udp_flag.load(Ordering::SeqCst) {
+       
         let _ = init_udp(app);
         restart_udp_flag.store(false, Ordering::SeqCst);
         tokio::spawn(async move {
@@ -358,4 +358,27 @@ pub fn render_error(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, fra
         }
     }
     toasts.show(ctx);
+}
+
+fn receive_upd_data(){
+    let tele_rx = TELE_DATA_RX.get().unwrap().lock().unwrap();
+    loop {
+        let tele_data = match tele_rx.try_recv() {
+            Ok(data) => {
+                // println!("[Receiver] 收到 (非阻塞): {}", msg.close);
+               data 
+            }
+            Err(mpsc::TryRecvError::Empty) => {
+                BTreeMap::new()
+                // 通道为空，没有新消息
+                // println!("[Receiver] 通道为空，执行其他工作...");
+                // thread::sleep(Duration::from_millis(200)); // 模拟做其他工作
+            }
+            Err(mpsc::TryRecvError::Disconnected) => {
+                BTreeMap::new()
+                // 所有发送端都已关闭，通道已断开
+                // println!("[Receiver] 所有发送端已断开，退出接收循环。");
+            }
+        };
+    }
 }

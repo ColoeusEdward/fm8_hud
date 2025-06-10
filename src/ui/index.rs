@@ -1,5 +1,5 @@
 use std::{
-    collections::hash_set, sync::{
+    collections::{hash_set, BTreeMap}, sync::{
         atomic::{AtomicBool, Ordering}, mpsc, Arc, Mutex, OnceLock
     }
 };
@@ -31,6 +31,8 @@ pub static  ERROR_RX: OnceLock<Mutex<mpsc::Receiver<ErrorData>>> = OnceLock::new
 pub static  ERROR_TX: OnceLock<Mutex<mpsc::Sender<ErrorData>>> = OnceLock::new();
 pub static  APP_RX: OnceLock<Mutex<mpsc::Receiver<&mut MyApp2>>> = OnceLock::new();
 pub static  APP_TX: OnceLock<Mutex<mpsc::Sender<&mut MyApp2>>> = OnceLock::new();
+pub static TELE_DATA_TX: OnceLock<Mutex<mpsc::Sender<BTreeMap<String, f32>>>> = OnceLock::new();
+pub static TELE_DATA_RX: OnceLock<Mutex<mpsc::Receiver<BTreeMap<String, f32>>>> = OnceLock::new();
 
 pub static RESTART_UDP_FLAG: OnceLock<AtomicBool> = OnceLock::new();
 pub static ERROR_SHOW_FLAG: OnceLock<AtomicBool> = OnceLock::new();
@@ -108,6 +110,9 @@ pub fn main() -> eframe::Result {
     let (tx, rx) = mpsc::channel::<MyApp2>();
     // APP_RX.set(Mutex::new(rx)).unwrap();
     // APP_TX.set(Mutex::new(tx)).unwrap();
+    let (tx, rx) = mpsc::channel::<BTreeMap<String, f32>>();
+    TELE_DATA_RX.set(Mutex::new(rx)).unwrap();
+    TELE_DATA_TX.set(Mutex::new(tx)).unwrap();
     global_hk();
     
     let options = eframe::NativeOptions {
@@ -170,7 +175,7 @@ pub fn main() -> eframe::Result {
 fn add_font(ctx: &egui::Context) {
     ctx.add_font(FontInsert::new(
         "my_font",
-        egui::FontData::from_static(include_bytes!("../../resource/arkitech_bold.ttf")),
+        egui::FontData::from_static(include_bytes!("../../resource/gt7-MyTimingFont.ttf")),
         vec![
             InsertFontFamily {
                 family: egui::FontFamily::Proportional,
@@ -197,7 +202,7 @@ fn replace_fonts(ctx: &egui::Context) {
     fonts.font_data.insert(
         "gt_font".to_owned(),
         std::sync::Arc::new(egui::FontData::from_static(include_bytes!(
-            "../../resource/arkitech_bold.ttf"
+            "../../resource/gt7-MyTimingFont.ttf"
         ))),
     );
 
@@ -339,10 +344,11 @@ impl eframe::App for MyApp2 {
         // test_transparent(ctx, self);
         // render_white_overlay(ctx, self);
         render_cross_line(ctx);
+
         render_sector(ctx, self);
         render_sight(ctx, self);
+        
         render_setting(ctx, self);
-
         render_error(ctx, self, _frame);
     }
 }

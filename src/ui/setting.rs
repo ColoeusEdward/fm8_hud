@@ -3,14 +3,10 @@ use std::sync::{
     Mutex,
 };
 
-use eframe::{
-    egui::{
-        self, popup_below_widget, show_tooltip, show_tooltip_at_pointer, Align, Area, Color32, Frame, Id, Label, Layout, PopupCloseBehavior, Pos2, RichText, TextEdit, UiBuilder
-    },
-    epaint::CornerRadiusF32,
-};
-
-use crate::ui::{index::IS_MOUSE_PASS, sector::render_bg};
+use eframe::egui::{
+        self, Align, Area, Layout, Pos2, RichText, TextEdit
+    };
+use crate::ui::index::IS_MOUSE_PASS;
 
 pub fn render_setting(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2) {
     let is_mouse_pass = IS_MOUSE_PASS

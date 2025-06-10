@@ -1,7 +1,7 @@
 use chrono::Local;
 use std::{
     collections::BTreeMap,
-    fs, io,
+    io,
     net::UdpSocket,
     sync::{
         atomic::{AtomicBool, AtomicUsize, Ordering},
@@ -437,8 +437,8 @@ pub fn calc_max_area_rpm_zone(rpm_length: i32) {
         // let mut max_area:Vec<i32> = Vec::new(); //[start_rpm,area]
         // let mut area_list:Vec<Vec<i32>> = Vec::new();//[[start_rpm,area]] 每一小格的面积
         let mut cumulative_areas: Vec<f32> = [0.0].to_vec(); //每一小格累加面积
-        let mut best_start = 0;
-        let mut best_end = 0;
+        // let mut best_start = 0;
+        // let mut best_end = 0;
         let mut min_real_rpm_index: usize = 0;
         let mut max_area: f32 = -1.0;
         // let mut down_count = 0;
@@ -487,8 +487,8 @@ pub fn calc_max_area_rpm_zone(rpm_length: i32) {
 
                 if cur_area > max_area {
                     max_area = cur_area;
-                    best_start = i;
-                    best_end = j; // 注意：这里的 endIndex 是包含的，表示 data[j] 是窗口的最后一个点
+                    // best_start = i;
+                    // best_end = j; // 注意：这里的 endIndex 是包含的，表示 data[j] 是窗口的最后一个点
                 }
                 // else if cur_area < max_area{//
                 //     down_count = down_count + 1;

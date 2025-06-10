@@ -1,10 +1,12 @@
 
+use std::sync::{atomic::{AtomicBool, Ordering}, Mutex};
+
 use eframe::{
     egui::{self, Area, Color32, Layout,  UiBuilder, ViewportCommand},
     epaint::CornerRadiusF32,
 };
 
-use crate::{ui::index::{MyApp2, SECTORID}};
+use crate::ui::index::{MyApp2, IS_MOUSE_PASS, SECTORID};
 
 pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
     let res = Area::new(*SECTORID.get().unwrap())
@@ -146,10 +148,108 @@ pub fn render_sight(ctx: &egui::Context, app: &mut MyApp2) {
         });
 }
 
+pub fn render_cross_line(ctx: &egui::Context){
+    let is_mouse_pass= IS_MOUSE_PASS.get_or_init(|| Mutex::new(AtomicBool::new(true))).lock().unwrap().load(Ordering::SeqCst);
+    if is_mouse_pass {
+        return;
+    }
+    // 获取屏幕尺寸
+    let screen_rect = ctx.screen_rect();
+    let center = screen_rect.center();
+    let width = screen_rect.max.x - screen_rect.min.x;
+
+    // 获取 Painter，用于直接绘图
+    let painter = ctx.layer_painter(egui::LayerId::new(
+        egui::Order::Foreground,
+        egui::Id::new("crosshair"),
+    ));
+
+    let line_color = egui::Color32::from_rgba_premultiplied(0, 0, 0, 80);
+    let thickness = 1.0;
+    let len = width/2.0; // 十字线长度（从中心往两边）
+
+    // 画水平线
+    painter.line_segment(
+        [
+            egui::pos2(center.x - len, center.y),
+            egui::pos2(center.x + len, center.y),
+        ],
+        egui::Stroke::new(thickness, line_color),
+    );
+
+    // 画垂直线
+    painter.line_segment(
+        [
+            egui::pos2(center.x, center.y - len),
+            egui::pos2(center.x, center.y + len),
+        ],
+        egui::Stroke::new(thickness, line_color),
+    );
+
+    // // 可选：正常 UI
+    // egui::CentralPanel::default().show(ctx, |ui| {
+    //     // ui.label("屏幕中央有一个十字辅助线");
+    // });
+}
+
 pub fn get_center_pos(ctx: &egui::Context) -> egui::Pos2 {
     // 获取当前 egui 视窗的尺寸
     let screen_rect = ctx.screen_rect();
     let screen_center = screen_rect.center();
     println!("🪵 [sector.rs:152]~ token ~ \x1b[0;32mscreen_center\x1b[0m = {} {}", screen_center.x, screen_center.y);
     return screen_center;
+}
+
+pub fn render_bg(ctx: &egui::Context, ui: &mut egui::Ui,size:[f32; 2],add_contents: impl FnOnce(&mut egui::Ui) -> ()) {
+    // 定义圆角矩形的尺寸
+    let desired_size = egui::vec2(size[0], size[1]);
+    // 分配一个精确大小的区域，这将是我们绘制矩形的边界
+    let (rect, _response) =
+        ui.allocate_exact_size(desired_size, egui::Sense::hover());
+
+    // 获取 painter
+    let painter = ui.painter();
+
+    // 定义填充颜色: #A2000000 (ARGB) -> 64% 透明度的黑色 (RGBA: 0,0,0,162)
+    let fill_color = Color32::from_rgba_unmultiplied(0, 0, 0, 80);
+
+    // 定义圆角半径
+    let corner_radius = 6.0; // 较大的圆角，更明显
+
+    // 绘制填充的圆角矩形
+    painter.rect_filled(
+        rect,
+        CornerRadiusF32::same(corner_radius), // 所有角的圆角半径相同
+        fill_color,
+    );
+
+    ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
+        ui.with_layout(
+            egui::Layout::centered_and_justified(egui::Direction::TopDown),
+            |ui| {
+                add_contents(ui);
+                // ui.heading("用户信息表单");
+
+                // ui.separator();
+
+                // ui.horizontal(|ui| {
+                //     ui.label("游戏遥测IP:");
+                //     ui.text_edit_singleline(&mut app.setting_data.ip);
+                // });
+
+                // ui.horizontal(|ui| {
+                //     ui.label("游戏遥测端口:");
+                //     ui.text_edit_singleline(&mut app.setting_data.port);
+                // });
+
+                // ui.separator();
+
+                // if ui.button("提交").clicked() {
+                //     println!("游戏遥测IP: {}", app.setting_data.ip);
+                //     // println!("邮箱: {}", self.email);
+                //     // println!("订阅: {}", self.subscribe);
+                // }
+            },
+        )
+    });
 }

@@ -14,6 +14,7 @@ mod controllers;
 mod enums;
 mod uitl;
 mod ui;
+mod config;
 
 #[tokio::main]
 async fn main() {

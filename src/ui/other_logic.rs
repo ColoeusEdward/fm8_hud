@@ -1,16 +1,30 @@
 use std::{
-    collections::HashSet, sync::{
-        atomic::{AtomicBool, Ordering}, mpsc::{self}, Mutex, MutexGuard
-    }, thread, time::Duration
+    collections::HashSet,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::{self},
+        Mutex, MutexGuard,
+    },
+    thread,
+    time::Duration,
 };
 
-use eframe::{egui::{self, Modifiers, }, Frame};
+use eframe::{
+    egui::{self, Align2, Color32, FontId, Modifiers, RichText},
+    Frame,
+};
+use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 use rdev::{listen, EventType, Key};
-use tokio::{ time::sleep};
+use tokio::time::sleep;
 
-use crate::{enums::TeleData, ui::index::{IS_FIRST, IS_MOUSE_PASS, KEYRECORD, LAST_IS_MOUSE_PASS, RXHOLDER, TXHOLDER}};
-
-
+use crate::{
+    controllers::udp::{init_udp, THREAD_RUNINNG_FLAG},
+    enums::TeleData,
+    ui::index::{
+        MyApp2, ERROR_RX, ERROR_SHOW_FLAG, IS_FIRST, IS_MOUSE_PASS, KEYRECORD, LAST_IS_MOUSE_PASS,
+        RESTART_UDP_FLAG, RXHOLDER, TXHOLDER,
+    },
+};
 
 pub struct KeyData {
     pub key: Key,
@@ -61,9 +75,9 @@ pub fn check_first(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2) {
             let handle = match handle {
                 Ok(h) => h,
                 Err(e) => {
-                    println!("IS_MOUSE_PASS error: {}", e) ;
+                    println!("IS_MOUSE_PASS error: {}", e);
                     return;
-                },
+                }
             };
             handle.store(true, Ordering::SeqCst);
         });
@@ -75,9 +89,9 @@ pub fn check_first(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2) {
         let handle = match handle {
             Ok(h) => h,
             Err(e) => {
-                println!("IS_MOUSE_PASS error: {}", e) ;
+                println!("IS_MOUSE_PASS error: {}", e);
                 return;
-            },
+            }
         };
         handle.store(false, Ordering::SeqCst);
         // ctx.request_repaint_after(Duration::from_millis(850));
@@ -87,7 +101,6 @@ pub fn check_first(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2) {
 pub fn key_listener() {
     // SHORTCUT_RX.set(rx).unwrap();
     let res = listen(move |event| {
-
         if event.event_type == EventType::KeyPress(Key::F2) {
             // println!("🪵 [index.rs:33]~ token ~ \x1b[0;32mF2\x1b[0m = ",);
             {
@@ -107,25 +120,36 @@ pub fn key_listener() {
                 let val = handle.load(Ordering::SeqCst);
                 // println!("🪵 [index.rs:36]~ token ~ \x1b[0;32mval\x1b[0m = {}", !val);
                 handle.store(!val, Ordering::SeqCst);
-                
             }
         }
         if event.event_type == EventType::KeyPress(Key::ControlLeft) {
-            let mut key_record = KEYRECORD.get_or_init(|| Mutex::new(HashSet::new())).lock().expect("lock error");
+            let mut key_record = KEYRECORD
+                .get_or_init(|| Mutex::new(HashSet::new()))
+                .lock()
+                .expect("lock error");
             key_record.insert(Key::ControlLeft);
             check_ctrl_q(key_record);
         }
         if event.event_type == EventType::KeyRelease(Key::ControlLeft) {
-            let mut key_record = KEYRECORD.get_or_init(|| Mutex::new(HashSet::new())).lock().expect("lock error");
+            let mut key_record = KEYRECORD
+                .get_or_init(|| Mutex::new(HashSet::new()))
+                .lock()
+                .expect("lock error");
             key_record.remove(&Key::ControlLeft);
         }
         if event.event_type == EventType::KeyPress(Key::KeyQ) {
-            let mut key_record = KEYRECORD.get_or_init(|| Mutex::new(HashSet::new())).lock().expect("lock error");
+            let mut key_record = KEYRECORD
+                .get_or_init(|| Mutex::new(HashSet::new()))
+                .lock()
+                .expect("lock error");
             key_record.insert(Key::KeyC);
             check_ctrl_q(key_record);
         }
         if event.event_type == EventType::KeyRelease(Key::KeyQ) {
-            let mut key_record = KEYRECORD.get_or_init(|| Mutex::new(HashSet::new())).lock().expect("lock error");
+            let mut key_record = KEYRECORD
+                .get_or_init(|| Mutex::new(HashSet::new()))
+                .lock()
+                .expect("lock error");
             key_record.remove(&Key::KeyC);
         }
     });
@@ -149,7 +173,11 @@ pub fn key_listener_focus(ctx: &egui::Context, app: &mut crate::ui::index::MyApp
             handle.store(!is_mouse_pass, Ordering::SeqCst);
         }
 
-        if input.modifiers.matches_exact(Modifiers::COMMAND | Modifiers::CTRL) && input.key_pressed(egui::Key::Q) {
+        if input
+            .modifiers
+            .matches_exact(Modifiers::COMMAND | Modifiers::CTRL)
+            && input.key_pressed(egui::Key::Q)
+        {
             // This block will execute if Ctrl+C (or Cmd+C on macOS) is pressed
             // println!("Ctrl+Q detected!");
             let handle = IS_MOUSE_PASS
@@ -169,10 +197,7 @@ pub fn key_listener_focus(ctx: &egui::Context, app: &mut crate::ui::index::MyApp
                 tx.send(tdata).unwrap();
             });
         }
-        
     });
-    
-    
 }
 
 pub fn listen_mouse_pass_event(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2) {
@@ -182,9 +207,9 @@ pub fn listen_mouse_pass_event(ctx: &egui::Context, app: &mut crate::ui::index::
     let handle = match handle {
         Ok(h) => h,
         Err(e) => {
-            println!("IS_MOUSE_PASS error: {}", e) ;
+            println!("IS_MOUSE_PASS error: {}", e);
             return;
-        },
+        }
     };
     let handle_last = LAST_IS_MOUSE_PASS
         .get_or_init(|| Mutex::new(AtomicBool::new(true)))
@@ -192,9 +217,9 @@ pub fn listen_mouse_pass_event(ctx: &egui::Context, app: &mut crate::ui::index::
     let handle_last = match handle_last {
         Ok(h) => h,
         Err(e) => {
-            println!("IS_MOUSE_PASS error: {}", e) ;
+            println!("IS_MOUSE_PASS error: {}", e);
             return;
-        },
+        }
     };
     let is_mouse_pass = handle.load(Ordering::SeqCst);
     let last_is_mouse_pass = handle_last.load(Ordering::SeqCst);
@@ -229,40 +254,35 @@ pub fn listen_mouse_pass_event(ctx: &egui::Context, app: &mut crate::ui::index::
 }
 
 pub fn global_hk() {
-
     let handle = thread::spawn(move || {
-
         key_listener();
     });
 }
 
-
-
-pub fn check_is_focus(ctx: &egui::Context,app: &mut crate::ui::index::MyApp2){
+pub fn check_is_focus(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2) {
     ctx.request_repaint_after(Duration::from_millis(16));
 
-//   // ctx.input(|i| i.is_focus_changed());
-//   let is_focused = ctx.input(|i| i.raw.focused);
-//   if is_focused {
-//     // println!("is focused");
-//   }else{
-//     // println!("is not focused");
-//     ctx.request_repaint_after(Duration::from_millis(16));
+    //   // ctx.input(|i| i.is_focus_changed());
+    //   let is_focused = ctx.input(|i| i.raw.focused);
+    //   if is_focused {
+    //     // println!("is focused");
+    //   }else{
+    //     // println!("is not focused");
+    //     ctx.request_repaint_after(Duration::from_millis(16));
 
-//   }
+    //   }
 }
 
-fn check_ctrl_q(key_record:MutexGuard<'_,HashSet<rdev::Key>>){
+fn check_ctrl_q(key_record: MutexGuard<'_, HashSet<rdev::Key>>) {
     let tx = TXHOLDER.get().unwrap().lock().unwrap();
-    if key_record.contains(&Key::KeyC) && key_record.contains(&Key::ControlLeft){
+    if key_record.contains(&Key::KeyC) && key_record.contains(&Key::ControlLeft) {
         let mut tdata = TeleData::default();
         tdata.close = true;
         tx.send(tdata).unwrap();
     }
 }
 
-
-pub fn rev_rx(ctx: &egui::Context,app: &mut crate::ui::index::MyApp2,frame: &mut Frame){
+pub fn rev_rx(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, frame: &mut Frame) {
     let rx = RXHOLDER.get().expect("rx get error");
     let rx = rx.lock().expect("lock error");
     match rx.try_recv() {
@@ -282,4 +302,60 @@ pub fn rev_rx(ctx: &egui::Context,app: &mut crate::ui::index::MyApp2,frame: &mut
             // println!("[Receiver] 所有发送端已断开，退出接收循环。");
         }
     }
+}
+
+pub fn check_udp_run(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2) {
+    let running = THREAD_RUNINNG_FLAG.get_or_init(|| AtomicBool::new(false));
+    let restart_udp_flag = RESTART_UDP_FLAG.get_or_init(|| AtomicBool::new(true));
+    if !running.load(Ordering::SeqCst) && restart_udp_flag.load(Ordering::SeqCst) {
+        let _ = init_udp(app);
+        restart_udp_flag.store(false, Ordering::SeqCst);
+        tokio::spawn(async move {
+            sleep(Duration::from_millis(200)).await;
+            restart_udp_flag.store(true, Ordering::SeqCst);
+        });
+    }
+}
+
+pub fn render_error(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, frame: &mut Frame) {
+    let err_rx = ERROR_RX.get().expect("rx get error");
+    let err_rx = err_rx.lock().expect("lock error");
+    let err_show_flag = ERROR_SHOW_FLAG.get_or_init(|| AtomicBool::new(true));
+    let mut toasts = Toasts::new()
+        .anchor(Align2::LEFT_TOP, (10.0, 10.0))
+        .direction(egui::Direction::TopDown);
+    match err_rx.try_recv() {
+        Ok(err) => {
+            println!("[Receiver] 收到 (非阻塞): {}", err.message);
+            if err_show_flag.load(Ordering::SeqCst) {
+                toasts.add(Toast {
+                    text: RichText::new(err.message).font(FontId::monospace(14.0)).color(Color32::WHITE).into(),
+                    kind: ToastKind::Error,
+                    options: ToastOptions::default()
+                        .duration_in_seconds(3.0)
+                        .show_progress(true)
+                        .show_icon(true),
+                    ..Default::default()
+                });
+
+                // Show all toasts
+
+                err_show_flag.store(false, Ordering::SeqCst);
+                tokio::spawn(async move {
+                    sleep(Duration::from_millis(4000)).await;
+                    err_show_flag.store(true, Ordering::SeqCst);
+                });
+            }
+        }
+        Err(mpsc::TryRecvError::Empty) => {
+            // 通道为空，没有新消息
+            // println!("[Receiver] 通道为空，执行其他工作...");
+            // thread::sleep(Duration::from_millis(200)); // 模拟做其他工作
+        }
+        Err(mpsc::TryRecvError::Disconnected) => {
+            // 所有发送端都已关闭，通道已断开
+            // println!("[Receiver] 所有发送端已断开，退出接收循环。");
+        }
+    }
+    toasts.show(ctx);
 }

@@ -61,3 +61,45 @@ impl Default for TeleData {
         }
     }
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+
+pub struct ShowState {
+    pub show_setting: bool,
+    pub show_info: bool,
+    pub show_sector: bool,
+    pub show_sight: bool,
+    pub show_complist: bool,
+}
+
+impl Default for ShowState {
+    fn default() -> Self {
+        Self { 
+            show_setting: false,
+            show_info: false,
+            show_sector: true,
+            show_sight: true,
+            show_complist: false
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+
+pub struct  SettingData{
+    pub ip: String,
+    pub port: String
+}
+
+impl Default for SettingData {
+    fn default() -> Self {
+        Self { 
+           ip: "127.0.0.1".to_string(),
+           port: "8000".to_string()
+        }
+    }
+}
+
+pub struct  ErrorData {
+    pub message: String
+}

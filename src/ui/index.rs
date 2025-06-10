@@ -1,6 +1,6 @@
 use std::{
     collections::hash_set, sync::{
-        atomic::{AtomicBool, Ordering}, mpsc, Mutex, OnceLock
+        atomic::{AtomicBool, Ordering}, mpsc, Arc, Mutex, OnceLock
     }
 };
 
@@ -11,10 +11,10 @@ use eframe::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    enums::TeleData,
+    enums::{ErrorData, SettingData, ShowState, TeleData},
     ui::{
-        other_logic::{check_first, check_is_focus, global_hk, key_listener_focus, listen_mouse_pass_event, rev_rx},
-        sector::{render_sector, render_sight},
+        other_logic::{check_first, check_is_focus, check_udp_run, global_hk, key_listener_focus, listen_mouse_pass_event, render_error, rev_rx},
+        sector::{render_cross_line, render_sector, render_sight}, setting::render_setting,
     },
 };
 
@@ -27,10 +27,17 @@ pub static CTX: OnceLock<&egui::Context> = OnceLock::new();
 pub static  KEYRECORD: OnceLock<Mutex<hash_set::HashSet<rdev::Key>>> = OnceLock::new();
 pub static  RXHOLDER: OnceLock<Mutex<mpsc::Receiver<TeleData>>> = OnceLock::new();
 pub static  TXHOLDER: OnceLock<Mutex<mpsc::Sender<TeleData>>> = OnceLock::new();
+pub static  ERROR_RX: OnceLock<Mutex<mpsc::Receiver<ErrorData>>> = OnceLock::new();
+pub static  ERROR_TX: OnceLock<Mutex<mpsc::Sender<ErrorData>>> = OnceLock::new();
+pub static  APP_RX: OnceLock<Mutex<mpsc::Receiver<&mut MyApp2>>> = OnceLock::new();
+pub static  APP_TX: OnceLock<Mutex<mpsc::Sender<&mut MyApp2>>> = OnceLock::new();
+
+pub static RESTART_UDP_FLAG: OnceLock<AtomicBool> = OnceLock::new();
+pub static ERROR_SHOW_FLAG: OnceLock<AtomicBool> = OnceLock::new();
 // pub static SHORTCUT_RX: OnceLock<mpsc::Receiver<keyData>> = OnceLock::new();
 static DEFAULT_INNERSIZE: Vec2 = egui::vec2(2100.0, 1300.0);
 static DEFAULT_POS2: Pos2 = egui::pos2(-180.0, -180.0);
-pub static DEFAULT_SECTOR_POS: Pos2 = egui::pos2(700.0, 200.0);
+pub static DEFAULT_SECTOR_POS: Pos2 = egui::pos2(852.0, 159.0);
 
 
 
@@ -50,6 +57,8 @@ pub struct MyApp2 {
     pub sector_pos: Pos2,
     pub tele_data: TeleData,
     pub sight_pos: Pos2,
+    pub show_state: ShowState,
+    pub setting_data: SettingData
 }
 
 impl MyApp2 {
@@ -70,6 +79,8 @@ impl MyApp2 {
             sector_pos: DEFAULT_SECTOR_POS,
             tele_data: TeleData::default(),
             sight_pos: Pos2 { x: 0.0, y: 0.0 },
+            show_state: ShowState::default(),
+            setting_data: SettingData::default(),
         }
     }
 }
@@ -91,6 +102,12 @@ pub fn main() -> eframe::Result {
     let (tx, rx) = mpsc::channel::<TeleData>();
     RXHOLDER.set(Mutex::new(rx)).unwrap();
     TXHOLDER.set(Mutex::new(tx)).unwrap();
+    let (tx, rx) = mpsc::channel::<ErrorData>();
+    ERROR_RX.set(Mutex::new(rx)).unwrap();
+    ERROR_TX.set(Mutex::new(tx)).unwrap();
+    let (tx, rx) = mpsc::channel::<MyApp2>();
+    // APP_RX.set(Mutex::new(rx)).unwrap();
+    // APP_TX.set(Mutex::new(tx)).unwrap();
     global_hk();
     
     let options = eframe::NativeOptions {
@@ -171,6 +188,9 @@ fn add_font(ctx: &egui::Context) {
 fn replace_fonts(ctx: &egui::Context) {
     // Start with the default fonts (we will be adding to them rather than replacing them).
     let mut fonts = egui::FontDefinitions::default();
+    // 从系统路径加载字体
+    #[cfg(target_os = "windows")]
+    let font_path = r"C:\Windows\Fonts\msyh.ttc";
 
     // Install my own font (maybe supporting non-latin characters).
     // .ttf and .otf files supported.
@@ -188,6 +208,12 @@ fn replace_fonts(ctx: &egui::Context) {
         ))),
     );
 
+    let font_data = std::fs::read(font_path).expect("无法读取字体文件");
+    fonts.font_data.insert(
+        "default".to_owned(),
+         Arc::new(egui::FontData::from_owned(font_data)),
+    );
+
     // Put my font first (highest priority) for proportional text:
     fonts
         .families
@@ -199,7 +225,13 @@ fn replace_fonts(ctx: &egui::Context) {
         .families
         .entry(egui::FontFamily::Proportional)
         .or_default()
-        .push("base_font".to_owned());
+        .push("default".to_owned());
+
+        fonts
+        .families
+        .entry(egui::FontFamily::Proportional)
+        .or_default()
+        .push("default".to_owned());
 
     // Put my font as last fallback for monospace:
     fonts
@@ -212,7 +244,7 @@ fn replace_fonts(ctx: &egui::Context) {
         .families
         .entry(egui::FontFamily::Monospace)
         .or_default()
-        .push("gt_font".to_owned());
+        .push("default".to_owned());
 
     // Tell egui to use these fonts:
     ctx.set_fonts(fonts);
@@ -221,6 +253,8 @@ fn replace_fonts(ctx: &egui::Context) {
 fn reset_myapp(me: &mut MyApp2) {
     me.show_ui = false;
     me.mouse_pass = true;
+    me.show_state.show_info = false;
+    me.show_state.show_setting = false;
 }
 
 // fn force_check_fullscreen(ui: &mut egui::Ui, ctx: &egui::Context) {
@@ -278,11 +312,14 @@ impl eframe::App for MyApp2 {
     }
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
+
         // egui 默认会将大部分 UI 状态（包括窗口位置）保存到 storage 中。
         // 你也可以保存你自己的应用状态，例如：
         storage.set_string("my_custom_label_text", "ee".to_owned());
         // storage.set_string("MyApp", serde_json::to_string(self).unwrap());
         eframe::set_value(storage, eframe::APP_KEY, self);
+        println!("🪵 [index.rs:320]~ token ~ \x1b[0;32mself\x1b[0m = {} {}", self.sector_pos.x,self.sector_pos.y);
+        println!("🪵 [index.rs:320]~ token ~ \x1b[0;32mself\x1b[0m = {} {}", self.sight_pos.x,self.sight_pos.y);
     }
     // snip
 
@@ -294,14 +331,19 @@ impl eframe::App for MyApp2 {
         check_first(ctx, self);
 
         check_is_focus(ctx, self);
+        check_udp_run(ctx, self);
 
         rev_rx(ctx, self, _frame);
         // get_cur_position(ctx, self);
 
         // test_transparent(ctx, self);
         // render_white_overlay(ctx, self);
+        render_cross_line(ctx);
         render_sector(ctx, self);
         render_sight(ctx, self);
+        render_setting(ctx, self);
+
+        render_error(ctx, self, _frame);
     }
 }
 

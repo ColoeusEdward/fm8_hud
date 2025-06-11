@@ -38,7 +38,7 @@ pub static RESTART_UDP_FLAG: OnceLock<AtomicBool> = OnceLock::new();
 pub static ERROR_SHOW_FLAG: OnceLock<AtomicBool> = OnceLock::new();
 // pub static SHORTCUT_RX: OnceLock<mpsc::Receiver<keyData>> = OnceLock::new();
 static DEFAULT_INNERSIZE: Vec2 = egui::vec2(2100.0, 1300.0);
-static DEFAULT_POS2: Pos2 = egui::pos2(-180.0, -180.0);
+static DEFAULT_POS2: Pos2 = egui::pos2(0.0, 0.0);
 pub static DEFAULT_SECTOR_POS: Pos2 = egui::pos2(852.0, 159.0);
 
 
@@ -301,20 +301,20 @@ fn get_cur_position(ctx: &egui::Context, app: &mut MyApp2) {
 // }
 
 impl eframe::App for MyApp2 {
-    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        // Rgba::TRANSPARENT.to_array() // Alpha 值为 0.0，表示完全透明
-        // Rgba::TRANSPARENT.to_array()
-        let is_mouse_pass = IS_MOUSE_PASS
-            .get_or_init(|| Mutex::new(AtomicBool::new(true)))
-            .lock()
-            .expect("failed to lock");
-        let is_mouse_pass = is_mouse_pass.load(Ordering::SeqCst);
-        if is_mouse_pass {
-            return [0.0, 0.0, 0.0, 0.0];
-        } else {
-            return [0.5, 0.5, 0.5, 0.1];
-        }
-    }
+    // fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+    //     // Rgba::TRANSPARENT.to_array() // Alpha 值为 0.0，表示完全透明
+    //     // Rgba::TRANSPARENT.to_array()
+    //     let is_mouse_pass = IS_MOUSE_PASS
+    //         .get_or_init(|| Mutex::new(AtomicBool::new(true)))
+    //         .lock()
+    //         .expect("failed to lock");
+    //     let is_mouse_pass = is_mouse_pass.load(Ordering::SeqCst);
+    //     if is_mouse_pass {
+    //         return [0.0, 0.0, 0.0, 0.0];
+    //     } else {
+    //         return [0.5, 0.5, 0.5, 0.1];
+    //     }
+    // }
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
 
@@ -347,7 +347,7 @@ impl eframe::App for MyApp2 {
 
         render_sector(ctx, self);
         render_sight(ctx, self);
-        
+
         render_setting(ctx, self);
         render_error(ctx, self, _frame);
     }

@@ -38,12 +38,14 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
     } as u32;
     let cur_lap_time = format_milliseconds_to_mmssms(cur_lap_time);
 
+    let is_mouse_pass = IS_MOUSE_PASS.get().unwrap().lock().unwrap().load(Ordering::SeqCst);
+
     let is_race_on = tele_data.get("IsRaceOn");
     let is_race_on = match is_race_on {
         Some(is_race_on) => is_race_on,
         None => &0.0,
     }.clone() as i32;
-    if is_race_on == 0 {
+    if is_race_on == 0 && is_mouse_pass {
         return;
     }
     // println!("🪵 [sector.rs:17]~ token ~ \x1b[0;32mtele_data\x1b[0m = {}", is_race_on);

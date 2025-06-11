@@ -1,6 +1,6 @@
 [package]
 name = "fm8_hud"
-version = "0.1.18"
+version = "0.1.19"
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -30,7 +30,3 @@ rdev = "0.5.3"
 eframe = { version = "0.31.1", features = ["persistence", "serde","wgpu","glow"] }
 bincode = "2.0.1"
 egui-toast = "0.17.0"
-egui_overlay = { version = "0.9.0", features = ["egui_default", "glfw_default","three_d","wgpu"] }
-egui_window_glfw_passthrough = "0.9.0"
-egui_render_three_d = "0.9.0"
-egui_render_wgpu = "0.9.0"

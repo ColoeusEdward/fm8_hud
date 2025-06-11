@@ -1,5 +1,5 @@
-use std::{collections::BTreeMap, sync::{
-    atomic::{AtomicBool, Ordering}, mpsc, Mutex
+use std::{collections::BTreeMap, mem, sync::{
+    atomic::{AtomicBool, Ordering}, Mutex, MutexGuard
 }};
 
 use eframe::{
@@ -7,47 +7,34 @@ use eframe::{
     epaint::CornerRadiusF32,
 };
 
-use crate::{ui::index::{MyApp2, IS_MOUSE_PASS, SECTORID, TELE_DATA_RX}, uitl::format_milliseconds_to_mmssms};
+use crate::{config::{get_track_data_map, TRACK_DATA_MAP}, enums::{GameRaceData, LapControl}, ui::index::{MyApp2, GAME_RACE_DATA, IS_MOUSE_PASS, LAST_TELE_DATA, SECTORID, SECTOR_RECORD_DATA}, uitl::format_milliseconds_to_mmssms};
 
 pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
     if !app.show_state.show_sector {
         return;
     }
-    let tele_rx = TELE_DATA_RX.get().unwrap().lock().unwrap();
-    let tele_data = match tele_rx.try_recv() {
-        Ok(data) => {
-            // println!("[Receiver] 收到 (非阻塞): {}", msg.close);
-           data 
-        }
-        Err(mpsc::TryRecvError::Empty) => {
-            BTreeMap::new()
-            // 通道为空，没有新消息
-            // println!("[Receiver] 通道为空，执行其他工作...");
-            // thread::sleep(Duration::from_millis(200)); // 模拟做其他工作
-        }
-        Err(mpsc::TryRecvError::Disconnected) => {
-            BTreeMap::new()
-            // 所有发送端都已关闭，通道已断开
-            // println!("[Receiver] 所有发送端已断开，退出接收循环。");
-        }
-    };
+    let tele_data = LAST_TELE_DATA.get().unwrap().lock().unwrap();
     let cur_lap_time = tele_data.get("CurrentLap");
     let cur_lap_time = match cur_lap_time {
         Some(cur_lap_time) => cur_lap_time*1000.0,
         None => 0.0,
     } as u32;
+    let test_lap = cur_lap_time;
     let cur_lap_time = format_milliseconds_to_mmssms(cur_lap_time);
 
     let is_mouse_pass = IS_MOUSE_PASS.get().unwrap().lock().unwrap().load(Ordering::SeqCst);
 
-    let is_race_on = tele_data.get("IsRaceOn");
-    let is_race_on = match is_race_on {
-        Some(is_race_on) => is_race_on,
-        None => &0.0,
-    }.clone() as i32;
-    if is_race_on == 0  {
+    // let is_race_on = tele_data.get("IsRaceOn");
+    // let is_race_on = match is_race_on {
+    //     Some(is_race_on) => is_race_on,
+    //     None => &0.0,
+    // }.clone() as i32;
+    if cur_lap_time == "00:00:000" && is_mouse_pass {
+        // let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+        // println!("🪵 [sector.rs:48]~ token ~ \x1b[0;32mcur_lap_time\x1b[0m = {} {} {}", cur_lap_time,ts,test_lap);
         return;
     }
+    sector_logic(&tele_data);
     // println!("🪵 [sector.rs:17]~ token ~ \x1b[0;32mtele_data\x1b[0m = {}", is_race_on);
     let res = Area::new(*SECTORID.get().unwrap())
         .current_pos(egui::pos2(app.sector_pos.x, app.sector_pos.y)) // 位置, 400.0 + app.yoffset)) // 位置
@@ -317,4 +304,58 @@ pub fn render_bg(
             },
         )
     });
+}
+
+
+pub fn sector_logic(tele_data:&MutexGuard<BTreeMap<String, f32>>){
+    let sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
+    // let game_race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
+    let race_data = update_race_data(tele_data);
+    let track_info = get_track_data_map(&race_data.track_id);
+
+    // const gameS1 = {
+    //     lap: parseInt(getSafeProp('CompletedLaps', 0)),
+    //     currentLap: parseInt(getSafeProp('CurrentLap', 0)),
+    //     distance: parseFloat(getSafeProp('GameRawData.DistanceTraveled', 0)),
+    //     raceTime: parseFloat(getSafeProp('GameRawData.CurrentRaceTime', 0)),
+    //     currentTime: timespantoseconds(getSafeProp('CurrentLapTime', '00:00:00')),
+    //     trackId: parseInt(getSafeProp('TrackId', 0)),
+    //     isInPit: getSafeProp('GameRawData.IsInPit', false)
+    // };
+}
+
+pub fn update_race_data(tele_data:&MutexGuard<BTreeMap<String, f32>>) -> GameRaceData {
+    let mut game_race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
+    let mut new_data = GameRaceData::default();
+    new_data.lap = match tele_data.get("LapNumber") {
+        Some(lap) => lap.clone() as i32,
+        None => 0,
+    };
+    new_data.current_lap = match tele_data.get("CurrentLap") {
+        Some(lap) => lap.clone() as i32,
+        None => 0,
+    };
+    new_data.distance = match tele_data.get("DistanceTraveled") {
+        Some(distance) => distance.clone() as f64,
+        None => 0.0,
+    };
+    new_data.race_time = match tele_data.get("CurrentRaceTime") {
+        Some(race_time) => race_time.clone() as f64,
+        None => 0.0,
+    };
+    new_data.current_time = match tele_data.get("CurrentLapTime") {
+        Some(current_time) => current_time.clone() as f64,
+        None => 0.0,
+    };
+    new_data.track_id = match tele_data.get("TrackId") {
+        Some(track_id) => track_id.clone() as u16,
+        None => 0,
+    };
+    new_data.is_in_pit = match tele_data.get("IsInPit") {
+        Some(is_in_pit) => is_in_pit.clone()==0.0,
+        None => false,
+    };
+    let old_map = mem::replace(&mut *game_race_data, new_data.clone());
+    new_data
+    // *game_race_data = new_data;
 }

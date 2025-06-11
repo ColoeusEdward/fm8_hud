@@ -1,5 +1,6 @@
 use std::{
     collections::{BTreeMap, HashSet},
+    mem,
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::{self},
@@ -19,9 +20,9 @@ use tokio::time::sleep;
 
 use crate::{
     controllers::udp::{init_udp, THREAD_RUNINNG_FLAG},
-    enums::TeleData,
+    enums::{GameRaceData, TeleData},
     ui::index::{
-         ERROR_RX, ERROR_SHOW_FLAG, IS_FIRST, IS_MOUSE_PASS, KEYRECORD, LAST_IS_MOUSE_PASS, RESTART_UDP_FLAG, RXHOLDER, TELE_DATA_RX, TXHOLDER
+        ERROR_RX, ERROR_SHOW_FLAG, GAME_RACE_DATA, IS_FIRST, IS_MOUSE_PASS, KEYRECORD, LAST_IS_MOUSE_PASS, LAST_TELE_DATA, RESTART_UDP_FLAG, RXHOLDER, TELE_DATA_RX, TXHOLDER
     },
 };
 
@@ -260,6 +261,7 @@ pub fn global_hk() {
 
 pub fn check_is_focus(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2) {
     ctx.request_repaint_after(Duration::from_millis(16));
+    // ctx.request_repaint_after(Duration::from_millis(32));
 
     //   // ctx.input(|i| i.is_focus_changed());
     //   let is_focused = ctx.input(|i| i.raw.focused);
@@ -307,7 +309,6 @@ pub fn check_udp_run(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2) {
     let running = THREAD_RUNINNG_FLAG.get_or_init(|| AtomicBool::new(false));
     let restart_udp_flag = RESTART_UDP_FLAG.get_or_init(|| AtomicBool::new(true));
     if !running.load(Ordering::SeqCst) && restart_udp_flag.load(Ordering::SeqCst) {
-       
         let _ = init_udp(app);
         restart_udp_flag.store(false, Ordering::SeqCst);
         tokio::spawn(async move {
@@ -329,7 +330,10 @@ pub fn render_error(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, fra
             println!("[Receiver] 收到 (非阻塞): {}", err.message);
             if err_show_flag.load(Ordering::SeqCst) {
                 toasts.add(Toast {
-                    text: RichText::new(err.message).font(FontId::monospace(14.0)).color(Color32::WHITE).into(),
+                    text: RichText::new(err.message)
+                        .font(FontId::monospace(14.0))
+                        .color(Color32::WHITE)
+                        .into(),
                     kind: ToastKind::Error,
                     options: ToastOptions::default()
                         .duration_in_seconds(3.0)
@@ -360,25 +364,26 @@ pub fn render_error(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, fra
     toasts.show(ctx);
 }
 
-fn receive_upd_data(){
-    let tele_rx = TELE_DATA_RX.get().unwrap().lock().unwrap();
-    loop {
-        let tele_data = match tele_rx.try_recv() {
-            Ok(data) => {
-                // println!("[Receiver] 收到 (非阻塞): {}", msg.close);
-               data 
-            }
-            Err(mpsc::TryRecvError::Empty) => {
-                BTreeMap::new()
-                // 通道为空，没有新消息
-                // println!("[Receiver] 通道为空，执行其他工作...");
-                // thread::sleep(Duration::from_millis(200)); // 模拟做其他工作
-            }
-            Err(mpsc::TryRecvError::Disconnected) => {
-                BTreeMap::new()
-                // 所有发送端都已关闭，通道已断开
-                // println!("[Receiver] 所有发送端已断开，退出接收循环。");
-            }
-        };
-    }
+pub fn receive_upd_data() {
+    tokio::spawn(async move {
+        loop {
+            let tele_rx = TELE_DATA_RX.get().unwrap().lock().unwrap();
+            
+
+            let tele_data = match tele_rx.recv() {
+                Ok(data) => {
+                    let mut last_tele_data = LAST_TELE_DATA.get().unwrap().lock().unwrap();
+                    // println!("[Receiver] 收到 (非阻塞): {}", msg.close);
+                    let old_map = mem::replace(&mut *last_tele_data, data);
+                }
+                Err(e)=>{
+
+                }
+            };
+            // thread::sleep(Duration::from_millis(4));
+            // tokio::time::sleep(tokio::time::Duration::from_millis(4)).await;
+        }
+    });
 }
+
+

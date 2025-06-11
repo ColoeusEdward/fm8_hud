@@ -119,3 +119,113 @@ impl Default for SettingData {
 pub struct  ErrorData {
     pub message: String
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+
+pub struct SectorRecord {
+    s1:LapControl,
+    s2:LapControl,
+    s3:LapControl
+}
+impl Default for SectorRecord {
+    fn default() -> Self {
+        Self { 
+            s1:LapControl::default(),
+            s2:LapControl::default(),
+            s3:LapControl::default(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)] // Add useful traits for debugging, default values, comparison, and cloning
+pub struct LapControl {
+    // Controle de tempo (Time control)
+    pub lap_start: f64,
+    pub sector_time: f64,
+    pub current_s1_time: f64, // Novo: armazena o tempo atual do S1
+
+    // Controle de posição (Position control)
+    pub last_valid_distance: f64,
+    pub sector_end: f64,
+    pub has_passed_zero_point: bool,
+
+    // Controle de estado (State control)
+    pub current_lap: i32,
+    pub is_done: bool,
+    pub needs_reset: bool,
+    pub was_in_pit: bool,
+    pub time_shown: bool, // Novo: controla se já mostrou o tempo atual
+
+    // Controle de recorde (Record control)
+    pub best_time: f64,
+    pub initialized: bool,
+    pub last_track_id: i32,
+    pub sector_start_time: f64,
+    pub jumped_lap: i32, // Armazena o número da volta em que ocorreu o pulo
+    pub track_length: f64,
+    pub was_jumped: bool,
+    pub custom_lap_counter: i32, // Novo contador independente
+    pub started_counting: bool,  // Flag para saber se já começamos a contar
+    pub delta: f64,
+    pub delta_until: f64,
+    pub s1_two_laps_ago: f64,
+    pub s1_one_lap_ago: f64,
+}
+
+impl Default for LapControl {
+    fn default() -> Self {
+        LapControl {
+            lap_start: 0.0,
+            sector_time: 0.0,
+            current_s1_time: 0.0,
+
+            last_valid_distance: 0.0,
+            sector_end: 0.0,
+            has_passed_zero_point: false,
+
+            current_lap: -2,
+            is_done: false,
+            needs_reset: true,
+            was_in_pit: false,
+            time_shown: false,
+
+            best_time: f64::INFINITY, // JavaScript's Infinity maps to f64::INFINITY
+            initialized: false,
+            last_track_id: -1,
+            sector_start_time: 0.0,
+            jumped_lap: 0, // null in JS becomes Option::None in Rust
+            track_length: 0.0,
+            was_jumped: false,
+            custom_lap_counter: 0,
+            started_counting: false,
+            delta: 0.0,
+            delta_until: 0.0,
+            s1_two_laps_ago: 0.0,
+            s1_one_lap_ago: 0.0,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GameRaceData{
+    pub lap: i32,
+    pub current_lap: i32,
+    pub distance: f64,
+    pub race_time: f64,
+    pub current_time: f64,
+    pub track_id: u16,
+    pub is_in_pit: bool
+}
+impl Default for GameRaceData {
+    fn default() -> Self {
+        Self { 
+            lap: 0,
+            current_lap: 0,
+            distance: 0.0,
+            race_time: 0.0,
+            current_time: 0.0,
+            track_id: 0,
+            is_in_pit: false
+        }
+    }
+}

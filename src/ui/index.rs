@@ -1,20 +1,29 @@
 use std::{
-    collections::{hash_set, BTreeMap}, sync::{
-        atomic::{AtomicBool, Ordering}, mpsc, Arc, Mutex, OnceLock
-    }
+    collections::{hash_set, BTreeMap},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc, Arc, Mutex, OnceLock,
+    },
 };
 
 use eframe::{
-    egui::{self, Area, Color32, Id, Pos2, Vec2}, egui_glow::ShaderVersion, epaint::text::{FontInsert, InsertFontFamily}
+    egui::{self, Area, Color32, Id, Pos2, Vec2},
+    egui_glow::ShaderVersion,
+    epaint::text::{FontInsert, InsertFontFamily},
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    enums::{ErrorData, SettingData, ShowState, TeleData},
+    enums::{ErrorData, GameRaceData, SectorRecord, SettingData, ShowState, TeleData},
     ui::{
-        other_logic::{check_first, check_is_focus, check_udp_run, global_hk, key_listener_focus, listen_mouse_pass_event, render_error, rev_rx},
-        sector::{render_cross_line, render_sector, render_sight}, setting::render_setting,
-    }, uitl::get_sreen_info,
+        other_logic::{
+            check_first, check_is_focus, check_udp_run, global_hk, key_listener_focus,
+            listen_mouse_pass_event, receive_upd_data, render_error, rev_rx,
+        },
+        sector::{render_cross_line, render_sector, render_sight},
+        setting::render_setting,
+    },
+    uitl::get_sreen_info,
 };
 
 pub static IS_FIRST: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
@@ -23,15 +32,18 @@ pub static LAST_IS_MOUSE_PASS: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
 pub static NEED_FIX_POS: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
 pub static SECTORID: OnceLock<Id> = OnceLock::new();
 pub static CTX: OnceLock<&egui::Context> = OnceLock::new();
-pub static  KEYRECORD: OnceLock<Mutex<hash_set::HashSet<rdev::Key>>> = OnceLock::new();
-pub static  RXHOLDER: OnceLock<Mutex<mpsc::Receiver<TeleData>>> = OnceLock::new();
-pub static  TXHOLDER: OnceLock<Mutex<mpsc::Sender<TeleData>>> = OnceLock::new();
-pub static  ERROR_RX: OnceLock<Mutex<mpsc::Receiver<ErrorData>>> = OnceLock::new();
-pub static  ERROR_TX: OnceLock<Mutex<mpsc::Sender<ErrorData>>> = OnceLock::new();
-pub static  APP_RX: OnceLock<Mutex<mpsc::Receiver<&mut MyApp2>>> = OnceLock::new();
-pub static  APP_TX: OnceLock<Mutex<mpsc::Sender<&mut MyApp2>>> = OnceLock::new();
+pub static KEYRECORD: OnceLock<Mutex<hash_set::HashSet<rdev::Key>>> = OnceLock::new();
+pub static RXHOLDER: OnceLock<Mutex<mpsc::Receiver<TeleData>>> = OnceLock::new();
+pub static TXHOLDER: OnceLock<Mutex<mpsc::Sender<TeleData>>> = OnceLock::new();
+pub static ERROR_RX: OnceLock<Mutex<mpsc::Receiver<ErrorData>>> = OnceLock::new();
+pub static ERROR_TX: OnceLock<Mutex<mpsc::Sender<ErrorData>>> = OnceLock::new();
+pub static APP_RX: OnceLock<Mutex<mpsc::Receiver<&mut MyApp2>>> = OnceLock::new();
+pub static APP_TX: OnceLock<Mutex<mpsc::Sender<&mut MyApp2>>> = OnceLock::new();
 pub static TELE_DATA_TX: OnceLock<Mutex<mpsc::Sender<BTreeMap<String, f32>>>> = OnceLock::new();
 pub static TELE_DATA_RX: OnceLock<Mutex<mpsc::Receiver<BTreeMap<String, f32>>>> = OnceLock::new();
+pub static LAST_TELE_DATA: OnceLock<Mutex<BTreeMap<String, f32>>> = OnceLock::new();
+pub static SECTOR_RECORD_DATA: OnceLock<Mutex<SectorRecord>> = OnceLock::new();
+pub static GAME_RACE_DATA: OnceLock<Mutex<GameRaceData>> = OnceLock::new();
 
 pub static RESTART_UDP_FLAG: OnceLock<AtomicBool> = OnceLock::new();
 pub static ERROR_SHOW_FLAG: OnceLock<AtomicBool> = OnceLock::new();
@@ -40,8 +52,6 @@ static DEFAULT_INNERSIZE: Vec2 = egui::vec2(1970.0, 1120.0);
 static DEFAULT_INNERSIZE_DIFF: Vec2 = egui::vec2(50.0, 40.0);
 static DEFAULT_POS2: Pos2 = egui::pos2(-50.0, -32.0);
 pub static DEFAULT_SECTOR_POS: Pos2 = egui::pos2(852.0, 159.0);
-
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MyApp2 {
@@ -60,11 +70,10 @@ pub struct MyApp2 {
     pub tele_data: TeleData,
     pub sight_pos: Pos2,
     pub show_state: ShowState,
-    pub setting_data: SettingData
+    pub setting_data: SettingData,
 }
 
 impl MyApp2 {
-
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
         Self {
             text: "Edit this text field if you want".to_owned(),
@@ -86,7 +95,6 @@ impl MyApp2 {
         }
     }
 }
-
 
 pub fn main() -> eframe::Result {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
@@ -113,8 +121,13 @@ pub fn main() -> eframe::Result {
     let (tx, rx) = mpsc::channel::<BTreeMap<String, f32>>();
     TELE_DATA_RX.set(Mutex::new(rx)).unwrap();
     TELE_DATA_TX.set(Mutex::new(tx)).unwrap();
+    LAST_TELE_DATA.set(Mutex::new(BTreeMap::new())).unwrap();
+    SECTOR_RECORD_DATA.set(Mutex::new(SectorRecord::default())).unwrap();
+    GAME_RACE_DATA.set(Mutex::new(GameRaceData::default())).unwrap();
     global_hk();
-    
+
+    receive_upd_data();
+
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_transparent(true) // Crucial: Make the native window transparent
@@ -127,27 +140,25 @@ pub fn main() -> eframe::Result {
         multisampling: 1,
         renderer: eframe::Renderer::Glow,
         hardware_acceleration: eframe::HardwareAcceleration::Required,
-        run_and_return:false,
-        window_builder:Some(Box::new(|vp| {
-            let (screenx,screeny) = get_sreen_info();
+        run_and_return: false,
+        window_builder: Some(Box::new(|vp| {
+            let (screenx, screeny) = get_sreen_info();
             vp.with_fullscreen(false)
-            .with_mouse_passthrough(true)
-            .with_transparent(true)
-            .with_decorations(true)
-            .with_position([DEFAULT_POS2.x, DEFAULT_POS2.y])
-            .with_inner_size([DEFAULT_INNERSIZE_DIFF.x+screenx, DEFAULT_INNERSIZE_DIFF.y+screeny]) // Initial size of the window\
-
+                .with_mouse_passthrough(true)
+                .with_transparent(true)
+                .with_decorations(true)
+                .with_position([DEFAULT_POS2.x, DEFAULT_POS2.y])
+                .with_inner_size([
+                    DEFAULT_INNERSIZE_DIFF.x + screenx,
+                    DEFAULT_INNERSIZE_DIFF.y + screeny,
+                ]) // Initial size of the window\
         })),
         // persist_window: false,
         // renderer: eframe::Renderer::Wgpu, // Explicitly tell eframe to use Wgpu
-        vsync: true,
-        shader_version:Some(ShaderVersion::Es300),
+        // vsync: true,
+        shader_version: Some(ShaderVersion::Es300),
         ..Default::default()
     };
-
-
-
- 
 
     eframe::run_native(
         "fm8_hud",
@@ -158,7 +169,7 @@ pub fn main() -> eframe::Result {
             // let mut app: MyApp2 = MyApp2::new(cc);
             let mut app: MyApp2 = if let Some(storage) = cc.storage {
                 // 如果有存储，尝试加载状态
-                let a= eframe::get_value(storage, eframe::APP_KEY);
+                let a = eframe::get_value(storage, eframe::APP_KEY);
                 match a {
                     Some(a) => a,
                     None => MyApp2::new(cc),
@@ -178,7 +189,6 @@ pub fn main() -> eframe::Result {
             Ok(Box::new(app))
         }),
     )
-
 }
 
 // Demonstrates how to add a font to the existing ones
@@ -226,7 +236,7 @@ fn replace_fonts(ctx: &egui::Context) {
     let font_data = std::fs::read(font_path).expect("无法读取字体文件");
     fonts.font_data.insert(
         "default".to_owned(),
-         Arc::new(egui::FontData::from_owned(font_data)),
+        Arc::new(egui::FontData::from_owned(font_data)),
     );
 
     // Put my font first (highest priority) for proportional text:
@@ -242,7 +252,7 @@ fn replace_fonts(ctx: &egui::Context) {
         .or_default()
         .push("default".to_owned());
 
-        fonts
+    fonts
         .families
         .entry(egui::FontFamily::Proportional)
         .or_default()
@@ -327,7 +337,6 @@ impl eframe::App for MyApp2 {
     }
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-
         // egui 默认会将大部分 UI 状态（包括窗口位置）保存到 storage 中。
         // 你也可以保存你自己的应用状态，例如：
         storage.set_string("my_custom_label_text", "ee".to_owned());
@@ -339,7 +348,7 @@ impl eframe::App for MyApp2 {
     // snip
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        key_listener_focus(ctx,self);
+        key_listener_focus(ctx, self);
         // println!("update");
         listen_mouse_pass_event(ctx, self);
 
@@ -362,8 +371,6 @@ impl eframe::App for MyApp2 {
         render_error(ctx, self, _frame);
     }
 }
-
-
 
 #[derive(Default)]
 struct TestApp {
@@ -406,5 +413,4 @@ pub fn test() {
         options,
         Box::new(|_cc| Ok(Box::<TestApp>::default())),
     );
-   
 }

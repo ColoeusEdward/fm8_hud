@@ -192,3 +192,8 @@ pub fn init_track_data_map(){
     track_data_map.insert(78, TrackData { length: 16480, s1_end: 5603, s2_end: 11042 });
 }
 
+pub fn get_track_data_map(track_id: &u16) -> TrackData {
+    let track_data = TRACK_DATA_MAP.get().unwrap().lock().unwrap();
+    let track_data = track_data.get(track_id).unwrap_or(&DEFAULT_TRACK_DATA);
+    track_data.clone()
+}

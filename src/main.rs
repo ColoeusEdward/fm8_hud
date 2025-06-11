@@ -23,10 +23,15 @@ mod config;
 #[tokio::main]
 async fn main() {
     init_track_data_map();
-    tokio::spawn(async move {
-        tokio::time::sleep(Duration::from_millis(2000)).await;
-        init_udp_server();
-    });
+
+    #[cfg(debug_assertions)]{
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(2000)).await;
+            init_udp_server();
+        });
+    }
+   
+
     let res = ui::index::main();
 
     

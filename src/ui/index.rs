@@ -5,7 +5,8 @@ use std::{
 };
 
 use eframe::{
-    egui::{self, Area, Color32, Id, Pos2, Vec2}, egui_glow::ShaderVersion, epaint::text::{FontInsert, InsertFontFamily}
+    egui::{self, Area, Color32, Id, Pos2, Vec2},
+    epaint::text::{FontInsert, InsertFontFamily},
 };
 use serde::{Deserialize, Serialize};
 
@@ -130,13 +131,11 @@ pub fn main() -> eframe::Result {
         renderer: eframe::Renderer::Glow,
         hardware_acceleration: eframe::HardwareAcceleration::Required,
         run_and_return:false,
-        shader_version:Some(ShaderVersion::Gl140),
         window_builder:Some(Box::new(|vp| {
             vp.with_fullscreen(true)
             .with_mouse_passthrough(true)
             .with_transparent(true)
         })),
-        centered: true,
         // persist_window: false,
         // renderer: eframe::Renderer::Wgpu, // Explicitly tell eframe to use Wgpu
         // vsync: true,

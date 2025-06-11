@@ -45,9 +45,9 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
         Some(is_race_on) => is_race_on,
         None => &0.0,
     }.clone() as i32;
-    // if is_race_on == 0 && is_mouse_pass {
-    //     return;
-    // }
+    if is_race_on == 0 && is_mouse_pass {
+        return;
+    }
     // println!("🪵 [sector.rs:17]~ token ~ \x1b[0;32mtele_data\x1b[0m = {}", is_race_on);
     let res = Area::new(*SECTORID.get().unwrap())
         .current_pos(egui::pos2(app.sector_pos.x, app.sector_pos.y)) // 位置, 400.0 + app.yoffset)) // 位置

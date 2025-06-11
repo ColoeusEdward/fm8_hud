@@ -45,7 +45,7 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
         Some(is_race_on) => is_race_on,
         None => &0.0,
     }.clone() as i32;
-    if is_race_on == 0 && is_mouse_pass {
+    if is_race_on == 0  {
         return;
     }
     // println!("🪵 [sector.rs:17]~ token ~ \x1b[0;32mtele_data\x1b[0m = {}", is_race_on);

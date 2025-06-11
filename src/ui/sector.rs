@@ -45,9 +45,9 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
         Some(is_race_on) => is_race_on,
         None => &0.0,
     }.clone() as i32;
-    if is_race_on == 0 && is_mouse_pass {
-        return;
-    }
+    // if is_race_on == 0 && is_mouse_pass {
+    //     return;
+    // }
     // println!("🪵 [sector.rs:17]~ token ~ \x1b[0;32mtele_data\x1b[0m = {}", is_race_on);
     let res = Area::new(*SECTORID.get().unwrap())
         .current_pos(egui::pos2(app.sector_pos.x, app.sector_pos.y)) // 位置, 400.0 + app.yoffset)) // 位置
@@ -72,7 +72,7 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
             let painter = ui.painter();
 
             // 定义填充颜色: #A2000000 (ARGB) -> 64% 透明度的黑色 (RGBA: 0,0,0,162)
-            let fill_color = Color32::from_rgba_unmultiplied(0, 0, 0, 80);
+            let fill_color = Color32::from_rgba_premultiplied(0, 0, 0, 80);
 
             // 定义圆角半径
             let corner_radius = 6.0; // 较大的圆角，更明显

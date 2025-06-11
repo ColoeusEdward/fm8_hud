@@ -125,10 +125,17 @@ pub fn main() -> eframe::Result {
             .with_resizable(true)
             .with_maximize_button(true)
             .with_mouse_passthrough(true) // Start with mouse passthrough enabled
+            .with_visible(true)
             .with_always_on_top(), // Crucial: Keep the window on top of others
         multisampling: 1,
         renderer: eframe::Renderer::Glow,
-        
+        hardware_acceleration: eframe::HardwareAcceleration::Required,
+        run_and_return:false,
+        window_builder:Some(Box::new(|vp| {
+            vp.with_fullscreen(true)
+            .with_mouse_passthrough(true)
+            .with_transparent(true)
+        })),
         // persist_window: false,
         // renderer: eframe::Renderer::Wgpu, // Explicitly tell eframe to use Wgpu
         // vsync: true,
@@ -301,20 +308,20 @@ fn get_cur_position(ctx: &egui::Context, app: &mut MyApp2) {
 // }
 
 impl eframe::App for MyApp2 {
-    // fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-    //     // Rgba::TRANSPARENT.to_array() // Alpha 值为 0.0，表示完全透明
-    //     // Rgba::TRANSPARENT.to_array()
-    //     let is_mouse_pass = IS_MOUSE_PASS
-    //         .get_or_init(|| Mutex::new(AtomicBool::new(true)))
-    //         .lock()
-    //         .expect("failed to lock");
-    //     let is_mouse_pass = is_mouse_pass.load(Ordering::SeqCst);
-    //     if is_mouse_pass {
-    //         return [0.0, 0.0, 0.0, 0.0];
-    //     } else {
-    //         return [0.5, 0.5, 0.5, 0.1];
-    //     }
-    // }
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        // Rgba::TRANSPARENT.to_array() // Alpha 值为 0.0，表示完全透明
+        // Rgba::TRANSPARENT.to_array()
+        let is_mouse_pass = IS_MOUSE_PASS
+            .get_or_init(|| Mutex::new(AtomicBool::new(true)))
+            .lock()
+            .expect("failed to lock");
+        let is_mouse_pass = is_mouse_pass.load(Ordering::SeqCst);
+        if is_mouse_pass {
+            return [0.0, 0.0, 0.0, 0.0];
+        } else {
+            return [0.5, 0.5, 0.5, 0.1];
+        }
+    }
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
 

@@ -14,7 +14,7 @@ use crate::{
     ui::{
         other_logic::{check_first, check_is_focus, check_udp_run, global_hk, key_listener_focus, listen_mouse_pass_event, render_error, rev_rx},
         sector::{render_cross_line, render_sector, render_sight}, setting::render_setting,
-    },
+    }, uitl::get_sreen_info,
 };
 
 pub static IS_FIRST: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
@@ -36,8 +36,9 @@ pub static TELE_DATA_RX: OnceLock<Mutex<mpsc::Receiver<BTreeMap<String, f32>>>> 
 pub static RESTART_UDP_FLAG: OnceLock<AtomicBool> = OnceLock::new();
 pub static ERROR_SHOW_FLAG: OnceLock<AtomicBool> = OnceLock::new();
 // pub static SHORTCUT_RX: OnceLock<mpsc::Receiver<keyData>> = OnceLock::new();
-static DEFAULT_INNERSIZE: Vec2 = egui::vec2(2100.0, 1300.0);
-static DEFAULT_POS2: Pos2 = egui::pos2(0.0, 0.0);
+static DEFAULT_INNERSIZE: Vec2 = egui::vec2(1970.0, 1120.0);
+static DEFAULT_INNERSIZE_DIFF: Vec2 = egui::vec2(50.0, 40.0);
+static DEFAULT_POS2: Pos2 = egui::pos2(-50.0, -32.0);
 pub static DEFAULT_SECTOR_POS: Pos2 = egui::pos2(852.0, 159.0);
 
 
@@ -116,12 +117,9 @@ pub fn main() -> eframe::Result {
     
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([DEFAULT_INNERSIZE.x, DEFAULT_INNERSIZE.y]) // Initial size of the window\
-            .with_position([DEFAULT_POS2.x, DEFAULT_POS2.y])
-            .with_decorations(false)
             .with_transparent(true) // Crucial: Make the native window transparent
-            .with_fullscreen(true)
-            .with_resizable(true)
+            .with_fullscreen(false)
+            .with_resizable(false)
             .with_maximize_button(true)
             .with_mouse_passthrough(true) // Start with mouse passthrough enabled
             .with_visible(true)
@@ -131,14 +129,19 @@ pub fn main() -> eframe::Result {
         hardware_acceleration: eframe::HardwareAcceleration::Required,
         run_and_return:false,
         window_builder:Some(Box::new(|vp| {
-            vp.with_fullscreen(true)
+            let (screenx,screeny) = get_sreen_info();
+            vp.with_fullscreen(false)
             .with_mouse_passthrough(true)
             .with_transparent(true)
+            .with_decorations(true)
+            .with_position([DEFAULT_POS2.x, DEFAULT_POS2.y])
+            .with_inner_size([DEFAULT_INNERSIZE_DIFF.x+screenx, DEFAULT_INNERSIZE_DIFF.y+screeny]) // Initial size of the window\
+
         })),
         // persist_window: false,
         // renderer: eframe::Renderer::Wgpu, // Explicitly tell eframe to use Wgpu
         vsync: true,
-        shader_version:Some(ShaderVersion::Gl120),
+        shader_version:Some(ShaderVersion::Es300),
         ..Default::default()
     };
 

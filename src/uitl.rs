@@ -1,5 +1,6 @@
 // use std::str::FromStr;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use winapi::um::winuser::{GetSystemMetrics, SM_CXSCREEN, SM_CYSCREEN};
 use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader};
 use std::io::{Read, Seek, SeekFrom};
@@ -372,4 +373,11 @@ pub fn format_milliseconds_to_mmssms(total_ms: u32) -> String {
 
     // 使用格式化宏来确保两位数的分钟和秒，三位数的毫秒（如果需要前导零）
     format!("{:02}:{:02}:{:03}", minutes, seconds, milliseconds)
+}
+
+pub fn get_sreen_info()->(f32,f32){
+    let screen_width = unsafe { GetSystemMetrics(SM_CXSCREEN) } as f32;
+    let screen_height = unsafe { GetSystemMetrics(SM_CYSCREEN) } as f32;
+    println!("主屏幕分辨率 (物理像素): {}x{}", screen_width, screen_height);
+    (screen_width,screen_height)
 }

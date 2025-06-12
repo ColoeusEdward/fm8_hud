@@ -2,13 +2,12 @@
 #![allow(rustdoc::missing_crate_level_docs)] // it's an example
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-use std::{ time::Duration};
 
 // use std::io;
 // use utf8_slice::slice;
 use tokio::{self};
 
-use crate::{config::init_track_data_map, controllers::test_sender::init_udp_server};
+use crate::{config::init_track_data_map};
 
 
 // use std::thread::sleep;
@@ -26,6 +25,8 @@ async fn main() {
 
     #[cfg(debug_assertions)]{
         tokio::spawn(async move {
+            use std::{ time::Duration};
+            use crate::{controllers::test_sender::init_udp_server};
             tokio::time::sleep(Duration::from_millis(2000)).await;
             init_udp_server();
         });

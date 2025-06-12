@@ -8,7 +8,7 @@ use std::{
 };
 
 use eframe::{
-    egui::{self, Area, Color32, Layout, TextStyle, UiBuilder, ViewportCommand},
+    egui::{self, Area, Color32, Layout, UiBuilder, ViewportCommand},
     epaint::CornerRadiusF32,
 };
 

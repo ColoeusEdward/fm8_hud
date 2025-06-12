@@ -20,7 +20,7 @@ use crate::{
             check_first, check_is_focus, check_udp_run, global_hk, key_listener_focus,
             listen_mouse_pass_event, receive_upd_data, render_error, rev_rx,
         },
-        sector::{self, render_cross_line, render_sector, render_sight},
+        sector::{ render_cross_line, render_sector, render_sight},
         setting::render_setting,
     },
     uitl::get_sreen_info,

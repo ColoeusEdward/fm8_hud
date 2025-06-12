@@ -20,7 +20,7 @@ use crate::{
             check_first, check_is_focus, check_udp_run, global_hk, key_listener_focus,
             listen_mouse_pass_event, receive_upd_data, render_error, rev_rx,
         },
-        sector::{render_cross_line, render_sector, render_sight},
+        sector::{self, render_cross_line, render_sector, render_sight},
         setting::render_setting,
     },
     uitl::get_sreen_info,
@@ -52,6 +52,7 @@ static DEFAULT_INNERSIZE: Vec2 = egui::vec2(1970.0, 1120.0);
 static DEFAULT_INNERSIZE_DIFF: Vec2 = egui::vec2(50.0, 40.0);
 static DEFAULT_POS2: Pos2 = egui::pos2(-50.0, -32.0);
 pub static DEFAULT_SECTOR_POS: Pos2 = egui::pos2(852.0, 159.0);
+pub static DEFAULT_SECTOR_DELTA_POS: Pos2 = egui::pos2(1072.0, 159.0);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MyApp2 {
@@ -67,6 +68,7 @@ pub struct MyApp2 {
     pub fullscreen: bool,
     pub transparent: bool,
     pub sector_pos: Pos2,
+    pub sector_delta_pos: Pos2,
     pub tele_data: TeleData,
     pub sight_pos: Pos2,
     pub show_state: ShowState,
@@ -88,6 +90,7 @@ impl MyApp2 {
             fullscreen: true,
             transparent: true,
             sector_pos: DEFAULT_SECTOR_POS,
+            sector_delta_pos: DEFAULT_SECTOR_DELTA_POS,
             tele_data: TeleData::default(),
             sight_pos: Pos2 { x: 0.0, y: 0.0 },
             show_state: ShowState::default(),
@@ -183,7 +186,7 @@ pub fn main() -> eframe::Result {
                 MyApp2::new(cc)
             };
 
-            replace_fonts(&cc.egui_ctx);
+            // replace_fonts(&cc.egui_ctx);
             add_font(&cc.egui_ctx);
             reset_myapp(&mut app);
             Ok(Box::new(app))
@@ -203,6 +206,36 @@ fn add_font(ctx: &egui::Context) {
             },
             InsertFontFamily {
                 family: egui::FontFamily::Monospace,
+                priority: egui::epaint::text::FontPriority::Lowest,
+            },
+        ],
+    ));
+
+    ctx.add_font(FontInsert::new(
+        "ms_font",
+        egui::FontData::from_static(include_bytes!(r"C:\Windows\Fonts\msyh.ttc")),
+        vec![
+            InsertFontFamily {
+                family: egui::FontFamily::Monospace,
+                priority: egui::epaint::text::FontPriority::Highest,
+            },
+            InsertFontFamily {
+                family: egui::FontFamily::Proportional,
+                priority: egui::epaint::text::FontPriority::Lowest,
+            },
+        ],
+    ));
+
+    ctx.add_font(FontInsert::new(
+        "gt_base_font",
+        egui::FontData::from_static(include_bytes!(r"../../resource/gt7-MyFont-Light.ttf")),
+        vec![
+            InsertFontFamily {
+                family: egui::FontFamily::Name("base".into()),
+                priority: egui::epaint::text::FontPriority::Highest,
+            },
+            InsertFontFamily {
+                family: egui::FontFamily::Proportional,
                 priority: egui::epaint::text::FontPriority::Lowest,
             },
         ],
@@ -252,18 +285,18 @@ fn replace_fonts(ctx: &egui::Context) {
         .or_default()
         .push("default".to_owned());
 
-    fonts
-        .families
-        .entry(egui::FontFamily::Proportional)
-        .or_default()
-        .push("default".to_owned());
+    // fonts
+    //     .families
+    //     .entry(egui::FontFamily::Proportional)
+    //     .or_default()
+    //     .push("default".to_owned());
 
-    // Put my font as last fallback for monospace:
-    fonts
-        .families
-        .entry(egui::FontFamily::Monospace)
-        .or_default()
-        .push("base_font".to_owned());
+    // // Put my font as last fallback for monospace:
+    // fonts
+    //     .families
+    //     .entry(egui::FontFamily::Monospace)
+    //     .or_default()
+    //     .push("base_font".to_owned());
 
     fonts
         .families

@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::HashSet,
     mem,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -20,9 +20,9 @@ use tokio::time::sleep;
 
 use crate::{
     controllers::udp::{init_udp, THREAD_RUNINNG_FLAG},
-    enums::{GameRaceData, TeleData},
+    enums::TeleData,
     ui::index::{
-        ERROR_RX, ERROR_SHOW_FLAG, GAME_RACE_DATA, IS_FIRST, IS_MOUSE_PASS, KEYRECORD, LAST_IS_MOUSE_PASS, LAST_TELE_DATA, RESTART_UDP_FLAG, RXHOLDER, TELE_DATA_RX, TXHOLDER
+        ERROR_RX, ERROR_SHOW_FLAG, IS_FIRST, IS_MOUSE_PASS, KEYRECORD, LAST_IS_MOUSE_PASS, LAST_TELE_DATA, RESTART_UDP_FLAG, RXHOLDER, TELE_DATA_RX, TXHOLDER
     },
 };
 

@@ -92,7 +92,7 @@ pub fn render_setting(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2) {
                 // 右侧内容：用 Spacer 推开，或者使用 with_layout(Align::Max)
                 ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                     ui.label(
-                        egui::RichText::new("      极限竞速8 hud overlay")
+                        egui::RichText::new("         极限竞速8 hud overlay")
                             .font(egui::FontId::monospace(14.0)), // 调整字体大小
                                                                   // .color(Color32::from_hex("#00FFFF").expect("hex error")), // 设置文字颜色
                     );

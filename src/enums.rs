@@ -92,6 +92,10 @@ pub struct  SettingData{
     pub sector_len: String,
     pub sector_scale: f32,
     pub sector_base_len: f32,
+    pub sector_delta_len: f32,
+    pub sector_delta_scale: f32,
+    // pub sector_delta_scale_ss2: f32,
+
 
     pub sight_len: String,
     pub sight_scale:f32,
@@ -107,6 +111,9 @@ impl Default for SettingData {
            sector_len: "210".to_string(),
            sector_scale:5.25,
            sector_base_len: 210.0,
+           sector_delta_len: 90.0,
+           sector_delta_scale: 2.25,
+        //    sector_delta_scale_ss2: 3.0,
 
            sight_len: "14".to_string(),
            sight_scale: 1.0,
@@ -123,9 +130,9 @@ pub struct  ErrorData {
 #[derive(Serialize, Deserialize, Debug)]
 
 pub struct SectorRecord {
-    s1:LapControl,
-    s2:LapControl,
-    s3:LapControl
+    pub s1:LapControl,
+    pub s2:LapControl,
+    pub s3:LapControl
 }
 impl Default for SectorRecord {
     fn default() -> Self {
@@ -142,7 +149,9 @@ pub struct LapControl {
     // Controle de tempo (Time control)
     pub lap_start: f64,
     pub sector_time: f64,
-    pub current_s1_time: f64, // Novo: armazena o tempo atual do S1
+    // pub current_s1_time: f64, // Novo: armazena o tempo atual do S1
+    // pub current_s2_time: f64, // Novo: armazena o tempo atual do S1
+    pub current_s_time: f64,
 
     // Controle de posição (Position control)
     pub last_valid_distance: f64,
@@ -159,7 +168,7 @@ pub struct LapControl {
     // Controle de recorde (Record control)
     pub best_time: f64,
     pub initialized: bool,
-    pub last_track_id: i32,
+    pub last_track_id: u16,
     pub sector_start_time: f64,
     pub jumped_lap: i32, // Armazena o número da volta em que ocorreu o pulo
     pub track_length: f64,
@@ -168,8 +177,22 @@ pub struct LapControl {
     pub started_counting: bool,  // Flag para saber se já começamos a contar
     pub delta: f64,
     pub delta_until: f64,
-    pub s1_two_laps_ago: f64,
-    pub s1_one_lap_ago: f64,
+    pub two_laps_ago: f64,
+    pub one_lap_ago: f64,
+
+    pub s1_pass_time: f64,
+    pub s2_pass_time: f64,
+
+    pub s1_end: f64,
+    pub s2_end: f64,
+
+    pub s1_time: f64,
+    pub s2_time: f64,
+    pub s3_time: f64,
+    pub s1_last_time: f64,
+    pub s2_last_time: f64,
+    pub s3_record: f64,
+    pub last_lap_s: f64
 }
 
 impl Default for LapControl {
@@ -177,7 +200,9 @@ impl Default for LapControl {
         LapControl {
             lap_start: 0.0,
             sector_time: 0.0,
-            current_s1_time: 0.0,
+            // current_s1_time: 0.0,
+            // current_s2_time: 0.0,
+            current_s_time: 0.0,
 
             last_valid_distance: 0.0,
             sector_end: 0.0,
@@ -191,7 +216,7 @@ impl Default for LapControl {
 
             best_time: f64::INFINITY, // JavaScript's Infinity maps to f64::INFINITY
             initialized: false,
-            last_track_id: -1,
+            last_track_id: 0,
             sector_start_time: 0.0,
             jumped_lap: 0, // null in JS becomes Option::None in Rust
             track_length: 0.0,
@@ -200,8 +225,22 @@ impl Default for LapControl {
             started_counting: false,
             delta: 0.0,
             delta_until: 0.0,
-            s1_two_laps_ago: 0.0,
-            s1_one_lap_ago: 0.0,
+            two_laps_ago: 0.0,
+            one_lap_ago: 0.0,
+
+            s1_pass_time: 0.0,
+            s2_pass_time: 0.0,
+
+            s1_end: 0.0,
+            s2_end: 0.0,
+
+            s1_time: 0.0,
+            s2_time: 0.0,
+            s3_time: 0.0,
+            s1_last_time: 0.0,
+            s2_last_time: 0.0,
+            s3_record: 0.0,
+            last_lap_s: 0.0
         }
     }
 }
@@ -214,7 +253,8 @@ pub struct GameRaceData{
     pub race_time: f64,
     pub current_time: f64,
     pub track_id: u16,
-    pub is_in_pit: bool
+    pub is_in_pit: bool,
+    pub last_lap_time: f64
 }
 impl Default for GameRaceData {
     fn default() -> Self {
@@ -225,7 +265,8 @@ impl Default for GameRaceData {
             race_time: 0.0,
             current_time: 0.0,
             track_id: 0,
-            is_in_pit: false
+            is_in_pit: false,
+            last_lap_time: 0.0
         }
     }
 }

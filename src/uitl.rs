@@ -381,3 +381,9 @@ pub fn get_sreen_info()->(f32,f32){
     println!("主屏幕分辨率 (物理像素): {}x{}", screen_width, screen_height);
     (screen_width,screen_height)
 }
+
+pub fn get_now_ts() -> f64 {
+    let now = SystemTime::now();
+    let since_the_epoch = now.duration_since(UNIX_EPOCH).expect("Time went backwards");
+    since_the_epoch.as_secs_f64()
+}

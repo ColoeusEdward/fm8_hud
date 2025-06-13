@@ -167,6 +167,7 @@ pub struct LapControl {
 
     // Controle de recorde (Record control)
     pub best_time: f64,
+    pub sub_best_time: f64,
     pub initialized: bool,
     pub last_track_id: u16,
     pub sector_start_time: f64,
@@ -215,6 +216,7 @@ impl Default for LapControl {
             time_shown: false,
 
             best_time: f64::INFINITY, // JavaScript's Infinity maps to f64::INFINITY
+            sub_best_time: f64::INFINITY,
             initialized: false,
             last_track_id: 0,
             sector_start_time: 0.0,
@@ -249,7 +251,9 @@ impl Default for LapControl {
 pub struct GameRaceData{
     pub lap: i32,
     pub current_lap: i32,
+    pub sub_current_lap: i32,
     pub distance: f64,
+    pub sub_distance: f64,
     pub race_time: f64,
     pub current_time: f64,
     pub track_id: u16,
@@ -266,7 +270,9 @@ impl Default for GameRaceData {
             current_time: 0.0,
             track_id: 0,
             is_in_pit: false,
-            last_lap_time: 0.0
+            last_lap_time: 0.0,
+            sub_current_lap: 0,
+            sub_distance: 0.0
         }
     }
 }

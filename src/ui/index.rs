@@ -41,6 +41,8 @@ pub static APP_RX: OnceLock<Mutex<mpsc::Receiver<&mut MyApp2>>> = OnceLock::new(
 pub static APP_TX: OnceLock<Mutex<mpsc::Sender<&mut MyApp2>>> = OnceLock::new();
 pub static TELE_DATA_TX: OnceLock<Mutex<mpsc::Sender<BTreeMap<String, f32>>>> = OnceLock::new();
 pub static TELE_DATA_RX: OnceLock<Mutex<mpsc::Receiver<BTreeMap<String, f32>>>> = OnceLock::new();
+pub static BOOL_TX: OnceLock<Mutex<mpsc::Sender<bool>>> = OnceLock::new();
+pub static BOOL_RX: OnceLock<Mutex<mpsc::Receiver<bool>>> = OnceLock::new();
 pub static LAST_TELE_DATA: OnceLock<Mutex<BTreeMap<String, f32>>> = OnceLock::new();
 pub static SECTOR_RECORD_DATA: OnceLock<Mutex<SectorRecord>> = OnceLock::new();
 pub static GAME_RACE_DATA: OnceLock<Mutex<GameRaceData>> = OnceLock::new();
@@ -124,6 +126,9 @@ pub fn main() -> eframe::Result {
     let (tx, rx) = mpsc::channel::<BTreeMap<String, f32>>();
     TELE_DATA_RX.set(Mutex::new(rx)).unwrap();
     TELE_DATA_TX.set(Mutex::new(tx)).unwrap();
+    let (tx, rx) = mpsc::channel::<bool>();
+    BOOL_TX.set(Mutex::new(tx)).unwrap();
+    BOOL_RX.set(Mutex::new(rx)).unwrap();
     LAST_TELE_DATA.set(Mutex::new(BTreeMap::new())).unwrap();
     SECTOR_RECORD_DATA.set(Mutex::new(SectorRecord::default())).unwrap();
     GAME_RACE_DATA.set(Mutex::new(GameRaceData::default())).unwrap();

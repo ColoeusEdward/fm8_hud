@@ -53,7 +53,7 @@ pub fn init_udp_server() {
                         );
                     }
                 }
-                thread::sleep(Duration::from_millis(8)); // 每隔3秒发送一次
+                thread::sleep(Duration::from_millis(11)); // 每隔3秒发送一次
             }
             println!("🪵 [test_sender.rs:57]~ token ~ \x1b[0;32m8)\x1b[0m = {}", "send over");
             

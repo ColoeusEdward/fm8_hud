@@ -1,10 +1,10 @@
 use std::{
     collections::BTreeMap,
-    mem,
     sync::{
         atomic::{AtomicBool, Ordering},
         Mutex, MutexGuard,
     },
+    time::Duration,
 };
 
 use eframe::{
@@ -14,9 +14,10 @@ use eframe::{
 
 use crate::{
     config::{get_track_data_map, TrackData},
-    enums::{GameRaceData, LapControl},
+    enums::{GameRaceData, LapControl, SectorRecord},
     ui::index::{
-        MyApp2, GAME_RACE_DATA, IS_MOUSE_PASS, LAST_TELE_DATA, SECTORID, SECTOR_RECORD_DATA,
+        MyApp2,  GAME_RACE_DATA, IS_MOUSE_PASS, LAST_TELE_DATA, SECTORID,
+        SECTOR_RECORD_DATA,
     },
     uitl::{format_milliseconds_to_mmssms, get_now_ts},
 };
@@ -51,7 +52,7 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
         // println!("🪵 [sector.rs:48]~ token ~ \x1b[0;32mcur_lap_time\x1b[0m = {} {} {}", cur_lap_time,ts,test_lap);
         return;
     }
-    let (sector_time, delta_show, delta) = sector_logic(&tele_data);
+    let (sector_time, delta_show, delta) = sector_logic2(&tele_data);
     let mut scale_to_base_s: f32 = 1.0;
     // println!("🪵 [sector.rs:17]~ token ~ \x1b[0;32mtele_data\x1b[0m = {}", is_race_on);
     let res = Area::new(*SECTORID.get().unwrap())
@@ -119,66 +120,68 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
         })
         .response;
 
-    let delta = Area::new("delta".into())
-        .current_pos(egui::pos2(
-            app.sector_pos.x + 220.0 * scale_to_base_s,
-            app.sector_pos.y,
-        ))
-        .show(ctx, |ui| {
-            // 定义圆角矩形的尺寸
-            let len = app.setting_data.sector_delta_len * scale_to_base_s;
+    if delta_show {
+        let delta = Area::new("delta".into())
+            .current_pos(egui::pos2(
+                app.sector_pos.x + 220.0 * scale_to_base_s,
+                app.sector_pos.y,
+            ))
+            .show(ctx, |ui| {
+                // 定义圆角矩形的尺寸
+                let len = app.setting_data.sector_delta_len * scale_to_base_s;
 
-            let scale_to_base = scale_to_base_s;
-            let desired_size = egui::vec2(len, len / app.setting_data.sector_delta_scale);
-            // 分配一个精确大小的区域，这将是我们绘制矩形的边界
-            let (rect, _response) = ui.allocate_exact_size(desired_size, egui::Sense::hover());
+                let scale_to_base = scale_to_base_s;
+                let desired_size = egui::vec2(len, len / app.setting_data.sector_delta_scale);
+                // 分配一个精确大小的区域，这将是我们绘制矩形的边界
+                let (rect, _response) = ui.allocate_exact_size(desired_size, egui::Sense::hover());
 
-            // 获取 painter
-            let painter = ui.painter();
+                // 获取 painter
+                let painter = ui.painter();
 
-            // 定义填充颜色: #A2000000 (ARGB) -> 64% 透明度的黑色 (RGBA: 0,0,0,162)
-            let fill_color = if delta.contains("+") {
-                Color32::from_rgba_premultiplied(177, 45, 44, 255)
-            } else {
-                Color32::from_rgba_premultiplied(44, 153, 50, 255)
-            };
-            // let fill_color = Color32::from_rgba_premultiplied(177, 45, 44 ,128);
+                // 定义填充颜色: #A2000000 (ARGB) -> 64% 透明度的黑色 (RGBA: 0,0,0,162)
+                let fill_color = if delta.contains("+") {
+                    Color32::from_rgba_premultiplied(177, 45, 44, 255)
+                } else {
+                    Color32::from_rgba_premultiplied(44, 153, 50, 255)
+                };
+                // let fill_color = Color32::from_rgba_premultiplied(177, 45, 44 ,128);
 
-            // 定义圆角半径
-            let corner_radius = 6.0; // 较大的圆角，更明显
+                // 定义圆角半径
+                let corner_radius = 6.0; // 较大的圆角，更明显
 
-            // 绘制填充的圆角矩形
-            painter.rect_filled(
-                rect,
-                CornerRadiusF32::same(corner_radius), // 所有角的圆角半径相同
-                fill_color,
-            );
-
-            // 在矩形中央添加一些文本，以显示其半透明效果
-            // 确保文本位于绘制的矩形内部
-            ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
-                ui.with_layout(
-                    egui::Layout::centered_and_justified(egui::Direction::TopDown),
-                    |ui| {
-                        ui.add_space(10.5 * scale_to_base); // 顶部一点空间
-                                                            // ui.label(egui::RichText::new("Area 中的圆角矩形").color(Color32::WHITE).size(22.0));
-                        let lb = ui.label(
-                            egui::RichText::new(delta)
-                                .family(egui::FontFamily::Name("base".into()))
-                                .color(Color32::WHITE)
-                                .weak()
-                                .size(24.0 * scale_to_base),
-                        );
-
-                        ui.add_space(5.0 * scale_to_base); // 文本和按钮之间的空间
-                                                           // if ui.button("点击我").clicked() {
-                                                           //     println!("按钮在 Area 中被点击了!");
-                                                           // }
-                    },
+                // 绘制填充的圆角矩形
+                painter.rect_filled(
+                    rect,
+                    CornerRadiusF32::same(corner_radius), // 所有角的圆角半径相同
+                    fill_color,
                 );
-            });
-        })
-        .response;
+
+                // 在矩形中央添加一些文本，以显示其半透明效果
+                // 确保文本位于绘制的矩形内部
+                ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
+                    ui.with_layout(
+                        egui::Layout::centered_and_justified(egui::Direction::TopDown),
+                        |ui| {
+                            ui.add_space(10.5 * scale_to_base); // 顶部一点空间
+                                                                // ui.label(egui::RichText::new("Area 中的圆角矩形").color(Color32::WHITE).size(22.0));
+                            let lb = ui.label(
+                                egui::RichText::new(delta)
+                                    .family(egui::FontFamily::Name("base".into()))
+                                    .color(Color32::WHITE)
+                                    .weak()
+                                    .size(24.0 * scale_to_base),
+                            );
+
+                            ui.add_space(5.0 * scale_to_base); // 文本和按钮之间的空间
+                                                               // if ui.button("点击我").clicked() {
+                                                               //     println!("按钮在 Area 中被点击了!");
+                                                               // }
+                        },
+                    );
+                });
+            })
+            .response;
+    }
 
     // 如果 Area 被拖动，更新其位置
     if res.dragged() {}
@@ -387,14 +390,237 @@ pub fn render_bg(
     });
 }
 
+pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, bool, String) {
+    //return (sector_time,delta_show,delta)
+    let mut sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
+    // let game_race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
+    update_race_data(tele_data);
+    let mut race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
+
+    let track_info = get_track_data_map(&race_data.track_id);
+    // println!("🪵 [sector.rs:398]~ token ~ \x1b[0;32m&race_data.track_id\x1b[0m = {}", &race_data.track_id);
+    let cur_sector_time = race_data.race_time - race_data.current_time;
+    if race_data.race_time <= 0.3 {
+        println!(
+            "🪵 [sector.rs:401]~ token ~ \x1b[0;32mrace_data.race_time <= 0.3 \x1b[0m = {}",
+            race_data.race_time <= 0.3
+        );
+        reset_lap_control(&mut sector_data.s1);
+        reset_lap_control(&mut sector_data.s2);
+        reset_lap_control(&mut sector_data.s3);
+        return (
+            format_milliseconds_to_mmssms((race_data.current_time * 1000.0) as u32),
+            false,
+            "0.00".to_string(),
+        );
+    }
+    if race_data.track_id != sector_data.s1.last_track_id {
+        change_track(&mut sector_data.s1, &race_data);
+        change_track(&mut sector_data.s2, &race_data);
+        change_track(&mut sector_data.s3, &race_data);
+    }
+    if !sector_data.s1.initialized {
+        init_s_record(&mut sector_data.s1, &track_info, 1);
+    }
+    if !sector_data.s2.initialized {
+        init_s_record(&mut sector_data.s2, &track_info, 2);
+    }
+    if !sector_data.s3.initialized {
+        // init_s_record(&mut sector_data.s2, &track_info, 2);
+        init_s_record(&mut sector_data.s3, &track_info, 3);
+    }
+
+    //---------------------
+    if race_data.lap == 0 && race_data.distance == -(track_info.length as f64) {
+        //跳圈检测
+        sector_data.s1.jumped_lap = -1;
+        sector_data.s2.jumped_lap = -1;
+        sector_data.s3.jumped_lap = -1;
+        // sector_data.s3.jumped_lap = -1;
+    } else if race_data.distance < -100.0 {
+        // println!(
+        //     "🪵 [sector.rs:437]~ token ~ \x1b[0;32m-100.0 \x1b[0m = {}",
+        //     -100
+        // );
+        //数据重置
+
+        set_lap_control_when_nega_distence(&mut sector_data.s1, &race_data, 1);
+        set_lap_control_when_nega_distence(&mut sector_data.s2, &race_data, 2);
+        set_lap_control_when_nega_distence(&mut sector_data.s3, &race_data, 3);
+    }
+    //-------------------------------------------------
+
+    if race_data.current_time > 0.0 {
+        if race_data.current_lap > race_data.sub_current_lap && race_data.distance > 0.0 {
+            race_data.sub_current_lap = race_data.current_lap;
+            race_data.sub_distance = race_data.distance;
+            // println!("🪵 [sector.rs:458]~ token ~ \x1b[0;32mrace_data.distance;\x1b[0m = {}", race_data.distance);
+        }
+        if race_data.distance < race_data.sub_distance {
+            race_data.sub_distance = 0.0;
+        }
+        let distence = race_data.distance - race_data.sub_distance;
+        // println!(
+        //     "🪵 [sector.rs:460]~ token ~ \x1b[0;32mdistence\x1b[0m = {} {}",
+        //     // race_data.distance,
+        //     distence,race_data.current_time
+        // );
+
+        // let distence = if race_data.distance > track_info.length as f64 {
+        //     race_data.distance - track_info.length as f64 * (race_data.lap - 1) as f64
+        // } else {
+        //     race_data.distance
+        // };
+        // println!("🪵 [sector.rs:454]~ token ~ \x1b[0;32mdistence\x1b[0m = {}", track_info.length as f64 * race_data.current_lap as f64);
+        if distence > 0.0 && distence < track_info.s1_end as f64 {
+            sector_data.s1.is_done = false;
+
+                // println!("🪵 [sector.rs:477]~ token ~ \x1b[0;32mace_data.lap \x1b[0m = {}", race_data.lap );
+            if !sector_data.s3.is_done && race_data.lap > 1 {
+                // println!("🪵 [sector.rs:477]~ token ~ \x1b[0;32mace_data.lap \x1b[0m = {}", race_data.lap );
+                sector_data.s3.is_done = true;
+                sector_data.s3.delta = sector_data.s3.current_s_time - sector_data.s3.best_time;
+                if sector_data.s3.current_s_time < sector_data.s3.best_time {
+                    sector_data.s3.sub_best_time = sector_data.s3.best_time;
+                    sector_data.s3.best_time = sector_data.s3.current_s_time;
+                }
+                sector_data.s3.time_shown = true;
+                println!("🪵 [sector.rs:507]~ token ~ \x1b[0;32msector_data.s1.delta\x1b[0m = s3/{}", sector_data.s3.delta);
+
+                tokio::spawn(async move {
+                    tokio::time::sleep(Duration::from_millis(5000)).await;
+                    let mut sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
+                    sector_data.s3.time_shown = false;
+                });
+            }
+
+            sector_data.s1.current_s_time = race_data.current_time;
+        } else if distence >= track_info.s1_end as f64 && distence < track_info.s2_end as f64 {
+            // sector_data.s1.is_done = true;
+            sector_data.s3.is_done = false;
+            sector_data.s2.is_done = false;
+
+            if !sector_data.s1.is_done {
+                sector_data.s1.is_done = true;
+                sector_data.s1.delta = sector_data.s1.current_s_time - sector_data.s1.best_time;
+                if sector_data.s1.current_s_time < sector_data.s1.best_time {
+                    sector_data.s1.sub_best_time = sector_data.s1.best_time;
+                    sector_data.s1.best_time = sector_data.s1.current_s_time;
+                }
+                sector_data.s1.time_shown = true;
+                println!("🪵 [sector.rs:507]~ token ~ \x1b[0;32msector_data.s1.delta\x1b[0m = s1/{}", sector_data.s1.delta);
+                tokio::spawn(async move {
+                    tokio::time::sleep(Duration::from_millis(5000)).await;
+                    let mut sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
+                    sector_data.s1.time_shown = false;
+                });
+            }
+
+            let sector_start_time = sector_data.s1.current_s_time;
+            sector_data.s2.current_s_time = race_data.current_time - sector_start_time;
+        } else if distence >= track_info.s2_end as f64 && distence < track_info.length as f64 {
+            // sector_data.s2.is_done = true;
+
+            if !sector_data.s2.is_done {
+                sector_data.s2.is_done = true;
+                sector_data.s2.delta = sector_data.s2.current_s_time - sector_data.s2.best_time;
+                if sector_data.s2.current_s_time < sector_data.s2.best_time {
+                    sector_data.s2.sub_best_time = sector_data.s2.best_time;
+                    sector_data.s2.best_time = sector_data.s2.current_s_time;
+                }
+                sector_data.s2.time_shown = true;
+                println!("🪵 [sector.rs:507]~ token ~ \x1b[0;32msector_data.s1.delta\x1b[0m = s2/{}", sector_data.s2.delta);
+                tokio::spawn(async move {
+                    tokio::time::sleep(Duration::from_millis(5000)).await;
+                    let mut sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
+                    sector_data.s2.time_shown = false;
+                });
+            }
+
+            let sector_start_time = sector_data.s2.current_s_time + sector_data.s1.current_s_time;
+            // println!("🪵 [sector.rs:539]~ token ~ \x1b[0;32msector_start_time\x1b[0m = {} {}",race_data.current_time, sector_start_time);
+            // if race_data.current_time > 10.0 { //确保没有用到下一圈的current time
+            // }
+            sector_data.s3.current_s_time = race_data.current_time - sector_start_time;
+
+        }
+    }
+
+    let output = if (!sector_data.s1.is_done && sector_data.s3.is_done) || (!sector_data.s1.is_done && !sector_data.s2.is_done && !sector_data.s3.is_done) {  //正常的下一圈或初始圈
+        // println!(
+        //     "🪵 [sector.rs:517]~ token ~ \x1b[0;32msector_data.s1\x1b[0m = {}",
+        //     "s1"
+        // );
+        let ctime = if sector_data.s3.time_shown { sector_data.s3.current_s_time } else { sector_data.s1.current_s_time };
+        format_milliseconds_to_mmssms((ctime * 1000.0) as u32)
+    } else if !sector_data.s1.is_done && !sector_data.s3.is_done && sector_data.s2.is_done {  //?到达第三赛段
+        // println!(
+        //     "🪵 [sector.rs:517]~ token ~ \x1b[0;32msector_data.s1\x1b[0m = {}",
+        //     "s3"
+        // );
+        let ctime = if sector_data.s2.time_shown { sector_data.s2.current_s_time } else { sector_data.s3.current_s_time };
+        format_milliseconds_to_mmssms((ctime * 1000.0) as u32)
+    } else if !sector_data.s2.is_done && sector_data.s1.is_done && !sector_data.s3.is_done {
+        // println!(
+        //     "🪵 [sector.rs:517]~ token ~ \x1b[0;32msector_data.s1\x1b[0m = {}",
+        //     "s2"
+        // );
+        let ctime = if sector_data.s1.time_shown { sector_data.s1.current_s_time } else { sector_data.s2.current_s_time };
+        format_milliseconds_to_mmssms((ctime * 1000.0) as u32)
+    } else if sector_data.s2.is_done && !sector_data.s3.is_done && sector_data.s1.is_done {  //正常到达第三赛段
+        // println!(
+        //     "🪵 [sector.rs:517]~ token ~ \x1b[0;32msector_data.s1\x1b[0m = {}",
+        //     "s33"
+        // );
+        let ctime = if sector_data.s2.time_shown { sector_data.s2.current_s_time } else { sector_data.s3.current_s_time };
+
+        format_milliseconds_to_mmssms((ctime * 1000.0) as u32)
+    } else {
+        // println!(
+        //     "🪵 [sector.rs:517]~ token ~ \x1b[0;32msector_data.s1\x1b[0m = {}",
+        //     "defa"
+        // );
+
+        format_milliseconds_to_mmssms((race_data.current_time * 1000.0) as u32)
+    };
+
+    let delta_show =
+        sector_data.s1.time_shown || sector_data.s2.time_shown || sector_data.s3.time_shown;
+
+    let mut delta = if sector_data.s1.time_shown {
+        let str = if sector_data.s1.delta > 0.0  { "+" } else { "" };
+        format!("{}{:.2}",str, sector_data.s1.delta)
+    } else if sector_data.s2.time_shown {
+        let str = if sector_data.s2.delta > 0.0  { "+" } else { "" };
+        format!("{}{:.2}",str, sector_data.s2.delta)
+    } else if sector_data.s3.time_shown {
+        let str = if sector_data.s3.delta > 0.0  { "+" } else { "" };
+        format!("{}{:.2}",str, sector_data.s3.delta)
+    } else {
+        "-:--".to_string()
+    };
+    if delta.contains("inf") {
+        delta = "-:--".to_string();
+    }
+
+    return (output, delta_show, delta);
+}
+
 pub fn sector_logic(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, bool, String) {
     //return (sector_time,delta_show,delta)
     let mut sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
     // let game_race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
-    let race_data = update_race_data(tele_data);
+    update_race_data(tele_data);
+    let mut race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
+
     let track_info = get_track_data_map(&race_data.track_id);
+    // println!("🪵 [sector.rs:398]~ token ~ \x1b[0;32m&race_data.track_id\x1b[0m = {}", &race_data.track_id);
     let cur_sector_time = race_data.race_time - race_data.current_time;
     if race_data.race_time <= 0.3 {
+        println!(
+            "🪵 [sector.rs:401]~ token ~ \x1b[0;32mrace_data.race_time <= 0.3 \x1b[0m = {}",
+            race_data.race_time <= 0.3
+        );
         reset_lap_control(&mut sector_data.s1);
         reset_lap_control(&mut sector_data.s2);
         reset_lap_control(&mut sector_data.s3);
@@ -437,6 +663,7 @@ pub fn sector_logic(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, b
         || race_data.is_in_pit == true
         || race_data.lap == 0
     {
+        // println!("🪵 [sector.rs:443]~ token ~ \x1b[0;32mrace_data.lap == 0\x1b[0m = {}", race_data.lap == 0);
         return (
             format_milliseconds_to_mmssms((race_data.current_time * 1000.0) as u32),
             false,
@@ -494,6 +721,8 @@ pub fn sector_logic(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, b
     {
         sector_data.s3.s2_time = sector_data.s2.current_s_time;
         sector_data.s3.s2_last_time = sector_data.s3.s2_time;
+        sector_data.s3.current_s_time =
+            race_data.current_time - sector_data.s3.s1_time - sector_data.s3.s2_time;
     }
 
     let show_current_time_s1 =
@@ -504,12 +733,40 @@ pub fn sector_logic(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, b
         race_data.race_time <= sector_data.s3.delta_until && race_data.current_time > 0.01;
 
     let output: String;
-    if show_current_time_s1 || !sector_data.s1.is_done {
-        output = format_milliseconds_to_mmssms((sector_data.s1.current_s_time * 1000.0) as u32);
-    } else if show_current_time_s2 || (sector_data.s1.is_done && !sector_data.s2.is_done) {
-        output = format_milliseconds_to_mmssms((sector_data.s2.current_s_time * 1000.0) as u32);
+    if show_current_time_s1 || (!sector_data.s1.is_done && !show_current_time_s3) {
+        // println!("🪵 [sector.rs:517]~ token ~ \x1b[0;32mis_done\x1b[0m = {}", "s1");
+        let cur_time = if !show_current_time_s1 {
+            race_data.current_time
+        } else {
+            sector_data.s1.current_s_time
+        };
+        output = format_milliseconds_to_mmssms((cur_time * 1000.0) as u32);
+    } else if show_current_time_s2
+        || (sector_data.s1.is_done && !sector_data.s2.is_done && !show_current_time_s3)
+    {
+        // println!("🪵 [sector.rs:517]~ token ~ \x1b[0;32mis_done\x1b[0m = {}", "s2");
+        let cur_time = if !show_current_time_s2 {
+            println!(
+                "🪵 [sector.rs:528]~ token ~ \x1b[0;32mrace_data.current_time \x1b[0m = {} {}",
+                race_data.current_time, sector_data.s2.sector_start_time
+            );
+            race_data.current_time - sector_data.s2.sector_start_time
+        } else {
+            sector_data.s2.current_s_time
+        };
+        output = format_milliseconds_to_mmssms((cur_time * 1000.0) as u32);
     } else {
-        output = format_milliseconds_to_mmssms((sector_data.s3.s3_time * 1000.0) as u32);
+        println!(
+            "🪵 [sector.rs:517]~ token ~ \x1b[0;32mis_done\x1b[0m = {}",
+            "s3"
+        );
+
+        let cur_time = if !show_current_time_s3 {
+            race_data.current_time - sector_data.s3.sector_start_time
+        } else {
+            sector_data.s3.s3_time
+        };
+        output = format_milliseconds_to_mmssms((cur_time * 1000.0) as u32);
     }
 
     let mut delta = 0.0;
@@ -520,13 +777,12 @@ pub fn sector_logic(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, b
     } else if show_current_time_s3 {
         delta = sector_data.s3.delta;
     }
-    let delta = if delta < 0.0 {
-        // format!("-{}", delta)
-        delta.to_string()
+    let delta = if delta <= 0.0 {
+        format!("{:.2}", delta)
     } else {
-        format!("+{}", delta)
+        format!("+{:.2}", delta)
     };
-
+    // println!("🪵 [sector.rs:537]~ token ~ \x1b[0;32moutput\x1b[0m = {}", output);
     return (
         output,
         show_current_time_s1 || show_current_time_s2 || show_current_time_s3,
@@ -534,41 +790,41 @@ pub fn sector_logic(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, b
     );
 }
 
-pub fn update_race_data(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> GameRaceData {
+pub fn update_race_data(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> () {
     let mut game_race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
-    let mut new_data = GameRaceData::default();
-    new_data.current_lap = match tele_data.get("LapNumber") {
+    // let mut new_data = GameRaceData::default();
+    game_race_data.current_lap = match tele_data.get("LapNumber") {
         Some(lap) => lap.clone() as i32,
         None => 0,
     };
-    new_data.lap = new_data.current_lap - 1;
+    game_race_data.lap = game_race_data.current_lap - 1;
 
-    new_data.distance = match tele_data.get("DistanceTraveled") {
+    game_race_data.distance = match tele_data.get("DistanceTraveled") {
         Some(distance) => distance.clone() as f64,
         None => 0.0,
     };
-    new_data.race_time = match tele_data.get("CurrentRaceTime") {
+    game_race_data.race_time = match tele_data.get("CurrentRaceTime") {
         Some(race_time) => race_time.clone() as f64,
         None => 0.0,
     };
-    new_data.current_time = match tele_data.get("CurrentLap") {
+    game_race_data.current_time = match tele_data.get("CurrentLap") {
         Some(current_time) => current_time.clone() as f64,
         None => 0.0,
     };
-    new_data.track_id = match tele_data.get("TrackId") {
+    game_race_data.track_id = match tele_data.get("TrackOrdinal") {
         Some(track_id) => track_id.clone() as u16,
         None => 0,
     };
-    new_data.is_in_pit = match tele_data.get("IsInPit") {
+    game_race_data.is_in_pit = match tele_data.get("IsInPit") {
         Some(is_in_pit) => is_in_pit.clone() == 0.0,
         None => false,
     };
-    new_data.last_lap_time = match tele_data.get("LastLap") {
+    game_race_data.last_lap_time = match tele_data.get("LastLap") {
         Some(last_lap_time) => last_lap_time.clone() as f64,
         None => 0.0,
     };
-    let old_map = mem::replace(&mut *game_race_data, new_data.clone());
-    new_data
+    // let old_map = mem::replace(&mut *game_race_data, new_data.clone());
+    // new_data
     // *game_race_data = new_data;
 }
 
@@ -623,6 +879,7 @@ fn set_lap_control_when_nega_distence(
     lap_control.was_jumped = true;
     lap_control.custom_lap_counter = 0;
     lap_control.started_counting = false;
+    lap_control.time_shown = false;
 
     lap_control.sector_time = 0.0;
     lap_control.is_done = false;
@@ -657,7 +914,7 @@ fn when_cur_lap_diff(lap_control: &mut LapControl, race_data: &GameRaceData, ord
         }
         if order == 3 {
             lap_control.lap_start = if race_data.race_time > 0.0 {
-                race_data.race_time
+                race_data.current_time
             } else {
                 get_now_ts() / 1000.0
             };
@@ -677,6 +934,7 @@ fn when_cur_lap_diff(lap_control: &mut LapControl, race_data: &GameRaceData, ord
             {
                 let s3_calc =
                     race_data.last_lap_time - (lap_control.s1_last_time + lap_control.s2_last_time);
+                println!("🪵 [sector.rs:684]~ token ~ \x1b[0;32mrace_data.last_lap_time\x1b[0m = {} {} {}", race_data.last_lap_time,lap_control.s1_last_time,lap_control.s2_last_time );
                 if s3_calc > 1.0 {
                     lap_control.s3_time = s3_calc;
                     lap_control.delta = lap_control.s3_time - lap_control.best_time;
@@ -765,9 +1023,9 @@ fn check_is_done(
     if is_done {
         let mut current_time = 0.0;
         if order == 1 {
-            current_time = race_data.race_time - lap_control.sector_start_time;
+            current_time = race_data.current_time
         } else if order == 2 {
-            current_time = race_data.race_time - lap_control.lap_start;
+            current_time = race_data.current_time
         }
 
         if order == 2 {
@@ -818,6 +1076,9 @@ fn check_is_done(
                     if current_time < lap_control.best_time {
                         lap_control.best_time = current_time;
                     }
+                    // if lap_distence >= lap_control.s1_end && is_moving_forward {
+                    //     lap_control.delta_until = race_data.race_time + 5.0;
+                    // }
                 }
                 if order == 2 {
                     if lap_control.sector_time < lap_control.best_time {
@@ -828,4 +1089,10 @@ fn check_is_done(
         }
     }
     is_done
+}
+
+fn new_lap_reset(sector_data: &mut SectorRecord, race_data: &GameRaceData, order: u16) {
+    sector_data.s1.is_done = false;
+    sector_data.s2.is_done = false;
+    sector_data.s3.is_done = false;
 }

@@ -611,7 +611,7 @@ pub fn sector_logic(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, b
     let mut sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
     // let game_race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
     update_race_data(tele_data);
-    let mut race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
+    let race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
 
     let track_info = get_track_data_map(&race_data.track_id);
     // println!("🪵 [sector.rs:398]~ token ~ \x1b[0;32m&race_data.track_id\x1b[0m = {}", &race_data.track_id);

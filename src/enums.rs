@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use core::str;
 use std::{ sync::OnceLock};
 
 // pub const GT_FONT_PATH: &str = "./arkitech_medium.ttf";
@@ -70,6 +71,8 @@ pub struct ShowState {
     pub show_sector: bool,
     pub show_sight: bool,
     pub show_complist: bool,
+    pub show_dash:bool,
+    pub show_history:bool
 }
 
 impl Default for ShowState {
@@ -79,7 +82,9 @@ impl Default for ShowState {
             show_info: false,
             show_sector: true,
             show_sight: true,
-            show_complist: false
+            show_complist: false,
+            show_dash:true,
+            show_history:true
         }
     }
 }
@@ -94,12 +99,17 @@ pub struct  SettingData{
     pub sector_base_len: f32,
     pub sector_delta_len: f32,
     pub sector_delta_scale: f32,
-    // pub sector_delta_scale_ss2: f32,
+    // pub sector_delta_scale_ss3: f32,
 
 
     pub sight_len: String,
     pub sight_scale:f32,
     pub sight_base_len: f32,
+
+
+    pub dash_len: String,
+    pub dash_scale: f32,
+    pub dash_base_len: f32
 }
 
 impl Default for SettingData {
@@ -109,16 +119,19 @@ impl Default for SettingData {
            port: "8000".to_string(),
 
            sector_len: "210".to_string(),
-           sector_scale:5.25,
+           sector_scale:5.25,  //长宽比
            sector_base_len: 210.0,
            sector_delta_len: 90.0,
            sector_delta_scale: 2.25,
-        //    sector_delta_scale_ss2: 3.0,
+        //    sector_delta_scale_ss3: 3.0,
 
            sight_len: "14".to_string(),
            sight_scale: 1.0,
            sight_base_len: 14.0,
 
+           dash_len: "1280".to_string(),
+           dash_scale: 8.0,
+           dash_base_len: 1280.0
         }
     }
 }
@@ -258,7 +271,17 @@ pub struct GameRaceData{
     pub current_time: f64,
     pub track_id: u16,
     pub is_in_pit: bool,
-    pub last_lap_time: f64
+    pub last_lap_time: f64,
+    pub speed: f64,
+    pub gear: i32,
+    pub accel: f64,
+    pub brake: f64,
+    pub rpm: f64,
+    pub clutch: f64,
+    pub steer: f64,
+    pub car_id: i32,
+    pub best_lap_time: f64,
+    pub max_rpm: f64,
 }
 impl Default for GameRaceData {
     fn default() -> Self {
@@ -272,7 +295,20 @@ impl Default for GameRaceData {
             is_in_pit: false,
             last_lap_time: 0.0,
             sub_current_lap: 0,
-            sub_distance: 0.0
+            sub_distance: 0.0,
+            speed: 0.0,
+            gear: 0,
+            accel: 0.0,
+            brake: 0.0,
+            rpm: 0.0,
+            clutch: 0.0,
+            steer: 0.0,
+            car_id: 0,
+            best_lap_time: 0.0,
+            max_rpm: 0.0
         }
     }
+}
+
+pub struct DashData {
 }

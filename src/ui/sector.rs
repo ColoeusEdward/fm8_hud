@@ -96,20 +96,21 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
                 ui.with_layout(
                     egui::Layout::centered_and_justified(egui::Direction::TopDown),
                     |ui| {
-                        ui.add_space(8.0 * scale_to_base); // 顶部一点空间
+                        ui.add_space(9.0 * scale_to_base); // 顶部一点空间
                                                            // ui.label(egui::RichText::new("Area 中的圆角矩形").color(Color32::WHITE).size(22.0));
                         let lb = ui.label(
                             egui::RichText::new(sector_time)
                                 .family(egui::FontFamily::Proportional)
                                 .color(Color32::WHITE)
-                                .size(20.0 * scale_to_base),
+                                .weak()
+                                .size(22.0 * scale_to_base),
                         );
                         if lb.dragged() {
                             app.sector_pos += lb.drag_delta();
                             app.sector_delta_pos += lb.drag_delta();
                             // println!("🪵 [sector.rs:65]~ token ~ \x1b[0;32msector_pos\x1b[0m = {} {}", app.sector_pos.x,app.sector_pos.y,);
                         }
-                        ui.add_space(5.0 * scale_to_base); // 文本和按钮之间的空间
+                        ui.add_space(3.0 * scale_to_base); // 文本和按钮之间的空间
                                                            // if ui.button("点击我").clicked() {
                                                            //     println!("按钮在 Area 中被点击了!");
                                                            // }
@@ -139,7 +140,7 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
 
                 // 定义填充颜色: #A2000000 (ARGB) -> 64% 透明度的黑色 (RGBA: 0,0,0,162)
                 let fill_color = if delta.contains("+") {
-                    Color32::from_rgba_premultiplied(177, 45, 44, 255)
+                    Color32::from_rgba_premultiplied(168, 14, 40, 255)
                 } else {
                     Color32::from_rgba_premultiplied(44, 153, 50, 255)
                 };
@@ -400,10 +401,10 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
     // println!("🪵 [sector.rs:398]~ token ~ \x1b[0;32m&race_data.track_id\x1b[0m = {}", &race_data.track_id);
     let cur_sector_time = race_data.race_time - race_data.current_time;
     if race_data.race_time <= 0.3 {
-        println!(
-            "🪵 [sector.rs:401]~ token ~ \x1b[0;32mrace_data.race_time <= 0.3 \x1b[0m = {}",
-            race_data.race_time <= 0.3
-        );
+        // println!(
+        //     "🪵 [sector.rs:401]~ token ~ \x1b[0;32mrace_data.race_time <= 0.3 \x1b[0m = {}",
+        //     race_data.race_time <= 0.3
+        // );
         reset_lap_control(&mut sector_data.s1);
         reset_lap_control(&mut sector_data.s2);
         reset_lap_control(&mut sector_data.s3);
@@ -886,6 +887,48 @@ pub fn update_race_data(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> () {
         None => false,
     };
     game_race_data.last_lap_time = match tele_data.get("LastLap") {
+        Some(last_lap_time) => last_lap_time.clone() as f64,
+        None => 0.0,
+    };
+    game_race_data.speed = match tele_data.get("Speed") {
+        Some(speed) => {
+            (speed * 3.6) as f64 
+        },
+        None => 0.0,
+    };
+    game_race_data.gear = match tele_data.get("Gear") {
+        Some(last_lap_time) => last_lap_time.clone() as i32,
+        None => 1,
+    };
+    game_race_data.accel = match tele_data.get("Accel") {
+        Some(last_lap_time) => last_lap_time.clone() as f64,
+        None => 0.0,
+    };
+    game_race_data.brake = match tele_data.get("Brake") {
+        Some(last_lap_time) => last_lap_time.clone() as f64,
+        None => 0.0,
+    };
+    game_race_data.clutch = match tele_data.get("Clutch") {
+        Some(last_lap_time) => last_lap_time.clone() as f64,
+        None => 0.0,
+    };
+    game_race_data.steer = match tele_data.get("Steer") {
+        Some(last_lap_time) => last_lap_time.clone() as f64,
+        None => 0.0,
+    };
+    game_race_data.car_id = match tele_data.get("CarOrdinal") {
+        Some(last_lap_time) => last_lap_time.clone() as i32,
+        None => 0,
+    };
+    game_race_data.rpm = match tele_data.get("CurrentEngineRpm") {
+        Some(last_lap_time) => last_lap_time.clone() as f64,
+        None => 0.0,
+    };
+    game_race_data.best_lap_time = match tele_data.get("BestLap") {
+        Some(last_lap_time) => last_lap_time.clone() as f64,
+        None => 0.0,
+    };
+    game_race_data.max_rpm = match tele_data.get("EngineMaxRpm") {
         Some(last_lap_time) => last_lap_time.clone() as f64,
         None => 0.0,
     };

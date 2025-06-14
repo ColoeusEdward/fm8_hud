@@ -1,6 +1,6 @@
 [package]
 name = "fm8_hud"
-version = "0.1.36"
+version = "0.1.37"
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -30,3 +30,4 @@ rdev = "0.5.3"
 eframe = { version = "0.31.1", features = ["persistence", "serde","wgpu","glow"] }
 bincode = "2.0.1"
 egui-toast = "0.17.0"
+image = "0.25.6"

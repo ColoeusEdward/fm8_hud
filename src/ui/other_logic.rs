@@ -21,9 +21,9 @@ use tokio::time::sleep;
 use crate::{
     controllers::udp::{init_udp, THREAD_RUNINNG_FLAG},
     enums::TeleData,
-    ui::index::{
+    ui::{dash::load_img, index::{
         ERROR_RX, ERROR_SHOW_FLAG, IS_FIRST, IS_MOUSE_PASS, KEYRECORD, LAST_IS_MOUSE_PASS, LAST_TELE_DATA, RESTART_UDP_FLAG, RXHOLDER, TELE_DATA_RX, TXHOLDER
-    },
+    }},
 };
 
 pub struct KeyData {
@@ -58,6 +58,7 @@ pub fn check_first(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2) {
             "🪵 [other_logic.rs:33]~ token ~ \x1b[0;32mis_first_handle\x1b[0m = {}",
             ""
         );
+        load_img(ctx, app);
         // ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(Pos2::new(
         //     app.pox, app.poy,
         // )));

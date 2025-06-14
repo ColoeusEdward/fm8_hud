@@ -174,19 +174,7 @@ pub fn render_complist(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, 
                     ui.checkbox(&mut app.show_state.show_sector, RichText::new("赛段计时")
                     .color(egui::Color32::WHITE)
                     .font(egui::FontId::proportional(14.0)),);
-                    // ui.add_space(5.0);
-                    // if ui.button("↑").clicked() {
-
-                    // }
-                    // if ui.button("↓").clicked() {
-
-                    // }
-                    // if ui.button("←").clicked() {
-                        
-                    // }
-                    // if ui.button("→").clicked() {
-                        
-                    // }
+                    
                     ui.add_space(40.0);
                     ui.label(RichText::new("长度")
                     .color(egui::Color32::WHITE)
@@ -199,25 +187,26 @@ pub fn render_complist(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, 
                     ui.checkbox(&mut app.show_state.show_sight, RichText::new("准星")
                     .color(egui::Color32::WHITE)
                     .font(egui::FontId::proportional(14.0)),);
-                    // ui.add_space(5.0);
-                    // if ui.button("↑").clicked() {
-
-                    // }
-                    // if ui.button("↓").clicked() {
-
-                    // }
-                    // if ui.button("←").clicked() {
-                        
-                    // }
-                    // if ui.button("→").clicked() {
-                        
-                    // }
+                    
                     ui.add_space(68.0);
                     ui.label(RichText::new("长度")
                     .color(egui::Color32::WHITE)
                     .font(egui::FontId::proportional(14.0)));
                     ui.add(TextEdit::singleline(&mut app.setting_data.sight_len).desired_width(80.0));
                 });
+
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut app.show_state.show_dash, RichText::new("仪表盘")
+                    .color(egui::Color32::WHITE)
+                    .font(egui::FontId::proportional(14.0)),);
+                    
+                    ui.add_space(68.0);
+                    ui.label(RichText::new("长度")
+                    .color(egui::Color32::WHITE)
+                    .font(egui::FontId::proportional(14.0)));
+                    ui.add(TextEdit::singleline(&mut app.setting_data.dash_len).desired_width(80.0));
+                });
+
 
                 ui.separator();
 

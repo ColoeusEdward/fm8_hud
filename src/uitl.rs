@@ -372,7 +372,7 @@ pub fn format_milliseconds_to_mmssms(total_ms: u32) -> String {
     let milliseconds = remaining_ms_after_minutes % 1000;
 
     // 使用格式化宏来确保两位数的分钟和秒，三位数的毫秒（如果需要前导零）
-    format!("{:02}:{:02}:{:03}", minutes, seconds, milliseconds)
+    format!("{:02}'{:02}.{:03}", minutes, seconds, milliseconds)
 }
 
 pub fn get_sreen_info()->(f32,f32){

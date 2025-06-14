@@ -16,12 +16,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     enums::{ErrorData, GameRaceData, SectorRecord, SettingData, ShowState, TeleData},
     ui::{
-        other_logic::{
+        dash::render_dash, other_logic::{
             check_first, check_is_focus, check_udp_run, global_hk, key_listener_focus,
             listen_mouse_pass_event, receive_upd_data, render_error, rev_rx,
-        },
-        sector::{ render_cross_line, render_sector, render_sight},
-        setting::render_setting,
+        }, sector::{ render_cross_line, render_sector, render_sight}, setting::render_setting
     },
     uitl::get_sreen_info,
 };
@@ -46,6 +44,7 @@ pub static BOOL_RX: OnceLock<Mutex<mpsc::Receiver<bool>>> = OnceLock::new();
 pub static LAST_TELE_DATA: OnceLock<Mutex<BTreeMap<String, f32>>> = OnceLock::new();
 pub static SECTOR_RECORD_DATA: OnceLock<Mutex<SectorRecord>> = OnceLock::new();
 pub static GAME_RACE_DATA: OnceLock<Mutex<GameRaceData>> = OnceLock::new();
+pub static TEXTURE_HANDLE_MAP: OnceLock<Mutex<BTreeMap<String, egui::TextureHandle>>> = OnceLock::new();
 
 pub static RESTART_UDP_FLAG: OnceLock<AtomicBool> = OnceLock::new();
 pub static ERROR_SHOW_FLAG: OnceLock<AtomicBool> = OnceLock::new();
@@ -75,6 +74,7 @@ pub struct MyApp2 {
     pub sight_pos: Pos2,
     pub show_state: ShowState,
     pub setting_data: SettingData,
+    pub hud_pos: Pos2,
 }
 
 impl MyApp2 {
@@ -97,6 +97,7 @@ impl MyApp2 {
             sight_pos: Pos2 { x: 0.0, y: 0.0 },
             show_state: ShowState::default(),
             setting_data: SettingData::default(),
+            hud_pos: Pos2 { x: 339.0, y: 339.0 },
         }
     }
 }
@@ -132,6 +133,7 @@ pub fn main() -> eframe::Result {
     LAST_TELE_DATA.set(Mutex::new(BTreeMap::new())).unwrap();
     SECTOR_RECORD_DATA.set(Mutex::new(SectorRecord::default())).unwrap();
     GAME_RACE_DATA.set(Mutex::new(GameRaceData::default())).unwrap();
+    let _ = TEXTURE_HANDLE_MAP.set(Mutex::new(BTreeMap::new()));
     global_hk();
 
     receive_upd_data();
@@ -204,6 +206,7 @@ fn add_font(ctx: &egui::Context) {
     ctx.add_font(FontInsert::new(
         "my_font",
         egui::FontData::from_static(include_bytes!("../../resource/gt7-MyTimingFont.ttf")),
+        // egui::FontData::from_static(include_bytes!("../../resource/gt7-MyTimingFontOutline.ttf")),
         vec![
             InsertFontFamily {
                 family: egui::FontFamily::Proportional,
@@ -404,6 +407,7 @@ impl eframe::App for MyApp2 {
 
         render_sector(ctx, self);
         render_sight(ctx, self);
+        render_dash(ctx, self);
 
         render_setting(ctx, self);
         render_error(ctx, self, _frame);

@@ -16,8 +16,7 @@ use crate::{
     config::{get_track_data_map, TrackData},
     enums::{GameRaceData, LapControl, SectorRecord},
     ui::index::{
-        MyApp2,  GAME_RACE_DATA, IS_MOUSE_PASS, LAST_TELE_DATA, SECTORID,
-        SECTOR_RECORD_DATA,
+        MyApp2, GAME_RACE_DATA, IS_MOUSE_PASS, LAST_TELE_DATA, SECTORID, SECTOR_RECORD_DATA,
     },
     uitl::{format_milliseconds_to_mmssms, get_now_ts},
 };
@@ -79,7 +78,7 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
             let painter = ui.painter();
 
             // 定义填充颜色: #A2000000 (ARGB) -> 64% 透明度的黑色 (RGBA: 0,0,0,162)
-            let fill_color = Color32::from_rgba_premultiplied(0, 0, 0, 80);
+            let fill_color = Color32::from_rgba_premultiplied(0, 0, 0, 168);
 
             // 定义圆角半径
             let corner_radius = 6.0; // 较大的圆角，更明显
@@ -97,7 +96,7 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
                 ui.with_layout(
                     egui::Layout::centered_and_justified(egui::Direction::TopDown),
                     |ui| {
-                        ui.add_space(7.0 * scale_to_base); // 顶部一点空间
+                        ui.add_space(8.0 * scale_to_base); // 顶部一点空间
                                                            // ui.label(egui::RichText::new("Area 中的圆角矩形").color(Color32::WHITE).size(22.0));
                         let lb = ui.label(
                             egui::RichText::new(sector_time)
@@ -438,10 +437,13 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
         sector_data.s3.jumped_lap = -1;
         // sector_data.s3.jumped_lap = -1;
     } else if race_data.distance < -100.0 {
-        // println!(
-        //     "🪵 [sector.rs:437]~ token ~ \x1b[0;32m-100.0 \x1b[0m = {}",
-        //     -100
-        // );
+        // if (race_data.current_time as i32 % 5) == 0 {
+        //     println!(
+        //         "🪵 [sector.rs:437]~ token ~ \x1b[0;32m-100.0 \x1b[0m = {}",
+        //         -100
+        //     );
+        // }
+
         //数据重置
 
         set_lap_control_when_nega_distence(&mut sector_data.s1, &race_data, 1);
@@ -460,11 +462,15 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
             race_data.sub_distance = 0.0;
         }
         let distence = race_data.distance - race_data.sub_distance;
+
+        // if (race_data.current_time as i32 % 5) == 0 {
         // println!(
-        //     "🪵 [sector.rs:460]~ token ~ \x1b[0;32mdistence\x1b[0m = {} {}",
-        //     // race_data.distance,
-        //     distence,race_data.current_time
+        //             "🪵 [sector.rs:460]~ token ~ \x1b[0;32mdistence\x1b[0m = {} {}",
+        //             race_data.distance,
+        //             distence,
+        //             // race_data.current_time
         // );
+        // }
 
         // let distence = if race_data.distance > track_info.length as f64 {
         //     race_data.distance - track_info.length as f64 * (race_data.lap - 1) as f64
@@ -474,9 +480,19 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
         // println!("🪵 [sector.rs:454]~ token ~ \x1b[0;32mdistence\x1b[0m = {}", track_info.length as f64 * race_data.current_lap as f64);
         if distence > 0.0 && distence < track_info.s1_end as f64 {
             sector_data.s1.is_done = false;
+            sector_data.s2.is_done = false;
 
-                // println!("🪵 [sector.rs:477]~ token ~ \x1b[0;32mace_data.lap \x1b[0m = {}", race_data.lap );
-            if !sector_data.s3.is_done && race_data.lap > 1 {
+            // if distence > 0.0  && distence < 2.0 {
+            // println!(
+            //     "🪵 [sector.rs:477]~ token ~ \x1b[0;32mace_data.lap \x1b[0m = {} {} {} {}",
+            //     !sector_data.s3.is_done,
+            //     race_data.lap > 1, race_data.lap, race_data.current_lap
+            // );
+            // }
+            
+            if !sector_data.s3.is_done && race_data.lap > -1 && sector_data.s3.current_s_time > 0.0 {
+                
+
                 // println!("🪵 [sector.rs:477]~ token ~ \x1b[0;32mace_data.lap \x1b[0m = {}", race_data.lap );
                 sector_data.s3.is_done = true;
                 sector_data.s3.delta = sector_data.s3.current_s_time - sector_data.s3.best_time;
@@ -485,7 +501,10 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
                     sector_data.s3.best_time = sector_data.s3.current_s_time;
                 }
                 sector_data.s3.time_shown = true;
-                println!("🪵 [sector.rs:507]~ token ~ \x1b[0;32msector_data.s1.delta\x1b[0m = s3/{}", sector_data.s3.delta);
+                println!(
+                    "🪵 [sector.rs:507]~ token ~ \x1b[0;32msector_data.s1.delta\x1b[0m = s3/{}",
+                    sector_data.s3.delta
+                );
 
                 tokio::spawn(async move {
                     tokio::time::sleep(Duration::from_millis(5000)).await;
@@ -495,6 +514,14 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
             }
 
             sector_data.s1.current_s_time = race_data.current_time;
+            // if (race_data.current_time as i32 % 5) == 0 {
+            //     println!(
+            //                 "🪵 [sector.rs:460]~ token ~ \x1b[0;32mdistence\x1b[0m = 1/{} {} {} {} ",
+            //                 sector_data.s1.current_s_time,
+            //                 sector_data.s1.is_done,sector_data.s2.is_done,sector_data.s3.is_done,
+            //                 // race_data.current_time
+            //     );
+            // }
         } else if distence >= track_info.s1_end as f64 && distence < track_info.s2_end as f64 {
             // sector_data.s1.is_done = true;
             sector_data.s3.is_done = false;
@@ -508,7 +535,10 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
                     sector_data.s1.best_time = sector_data.s1.current_s_time;
                 }
                 sector_data.s1.time_shown = true;
-                println!("🪵 [sector.rs:507]~ token ~ \x1b[0;32msector_data.s1.delta\x1b[0m = s1/{}", sector_data.s1.delta);
+                println!(
+                    "🪵 [sector.rs:507]~ token ~ \x1b[0;32msector_data.s1.delta\x1b[0m = s1/{}",
+                    sector_data.s1.delta
+                );
                 tokio::spawn(async move {
                     tokio::time::sleep(Duration::from_millis(5000)).await;
                     let mut sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
@@ -518,6 +548,13 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
 
             let sector_start_time = sector_data.s1.current_s_time;
             sector_data.s2.current_s_time = race_data.current_time - sector_start_time;
+
+            // if (race_data.current_time as i32 % 5) == 0 {
+            //     println!(
+            //         "🪵 [sector.rs:460]~ token ~ \x1b[0;32mdistence\x1b[0m = 2/{} ",
+            //         sector_data.s2.current_s_time // race_data.current_time
+            //     );
+            // }
         } else if distence >= track_info.s2_end as f64 && distence < track_info.length as f64 {
             // sector_data.s2.is_done = true;
 
@@ -529,7 +566,10 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
                     sector_data.s2.best_time = sector_data.s2.current_s_time;
                 }
                 sector_data.s2.time_shown = true;
-                println!("🪵 [sector.rs:507]~ token ~ \x1b[0;32msector_data.s1.delta\x1b[0m = s2/{}", sector_data.s2.delta);
+                println!(
+                    "🪵 [sector.rs:507]~ token ~ \x1b[0;32msector_data.s1.delta\x1b[0m = s2/{}",
+                    sector_data.s2.delta
+                );
                 tokio::spawn(async move {
                     tokio::time::sleep(Duration::from_millis(5000)).await;
                     let mut sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
@@ -542,37 +582,63 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
             // if race_data.current_time > 10.0 { //确保没有用到下一圈的current time
             // }
             sector_data.s3.current_s_time = race_data.current_time - sector_start_time;
-
+            // if (race_data.current_time as i32 % 5) == 0 {
+            //     println!(
+            //         "🪵 [sector.rs:460]~ token ~ \x1b[0;32mdistence\x1b[0m = 3/{} ",
+            //         sector_data.s3.current_s_time // race_data.current_time
+            //     );
+            // }
         }
     }
 
-    let output = if (!sector_data.s1.is_done && sector_data.s3.is_done) || (!sector_data.s1.is_done && !sector_data.s2.is_done && !sector_data.s3.is_done) {  //正常的下一圈或初始圈
+    let output = if (!sector_data.s1.is_done && sector_data.s3.is_done)
+        || (!sector_data.s1.is_done && !sector_data.s2.is_done && !sector_data.s3.is_done)
+    {
+        //正常的下一圈或初始圈
         // println!(
         //     "🪵 [sector.rs:517]~ token ~ \x1b[0;32msector_data.s1\x1b[0m = {}",
         //     "s1"
         // );
-        let ctime = if sector_data.s3.time_shown { sector_data.s3.current_s_time } else { sector_data.s1.current_s_time };
+        let ctime = if sector_data.s3.time_shown {
+            sector_data.s3.current_s_time
+        } else {
+            sector_data.s1.current_s_time
+        };
         format_milliseconds_to_mmssms((ctime * 1000.0) as u32)
-    } else if !sector_data.s1.is_done && !sector_data.s3.is_done && sector_data.s2.is_done {  //?到达第三赛段
+    } else if !sector_data.s1.is_done && !sector_data.s3.is_done && sector_data.s2.is_done {
+        //?到达第三赛段
         // println!(
         //     "🪵 [sector.rs:517]~ token ~ \x1b[0;32msector_data.s1\x1b[0m = {}",
         //     "s3"
         // );
-        let ctime = if sector_data.s2.time_shown { sector_data.s2.current_s_time } else { sector_data.s3.current_s_time };
+        let ctime = if sector_data.s2.time_shown {
+            sector_data.s2.current_s_time
+        } else {
+            sector_data.s3.current_s_time
+        };
         format_milliseconds_to_mmssms((ctime * 1000.0) as u32)
     } else if !sector_data.s2.is_done && sector_data.s1.is_done && !sector_data.s3.is_done {
         // println!(
         //     "🪵 [sector.rs:517]~ token ~ \x1b[0;32msector_data.s1\x1b[0m = {}",
         //     "s2"
         // );
-        let ctime = if sector_data.s1.time_shown { sector_data.s1.current_s_time } else { sector_data.s2.current_s_time };
+        let ctime = if sector_data.s1.time_shown {
+            sector_data.s1.current_s_time
+        } else {
+            sector_data.s2.current_s_time
+        };
         format_milliseconds_to_mmssms((ctime * 1000.0) as u32)
-    } else if sector_data.s2.is_done && !sector_data.s3.is_done && sector_data.s1.is_done {  //正常到达第三赛段
+    } else if sector_data.s2.is_done && !sector_data.s3.is_done && sector_data.s1.is_done {
+        //正常到达第三赛段
         // println!(
         //     "🪵 [sector.rs:517]~ token ~ \x1b[0;32msector_data.s1\x1b[0m = {}",
         //     "s33"
         // );
-        let ctime = if sector_data.s2.time_shown { sector_data.s2.current_s_time } else { sector_data.s3.current_s_time };
+        let ctime = if sector_data.s2.time_shown {
+            sector_data.s2.current_s_time
+        } else {
+            sector_data.s3.current_s_time
+        };
 
         format_milliseconds_to_mmssms((ctime * 1000.0) as u32)
     } else {
@@ -588,14 +654,14 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
         sector_data.s1.time_shown || sector_data.s2.time_shown || sector_data.s3.time_shown;
 
     let mut delta = if sector_data.s1.time_shown {
-        let str = if sector_data.s1.delta > 0.0  { "+" } else { "" };
-        format!("{}{:.2}",str, sector_data.s1.delta)
+        let str = if sector_data.s1.delta > 0.0 { "+" } else { "" };
+        format!("{}{:.2}", str, sector_data.s1.delta)
     } else if sector_data.s2.time_shown {
-        let str = if sector_data.s2.delta > 0.0  { "+" } else { "" };
-        format!("{}{:.2}",str, sector_data.s2.delta)
+        let str = if sector_data.s2.delta > 0.0 { "+" } else { "" };
+        format!("{}{:.2}", str, sector_data.s2.delta)
     } else if sector_data.s3.time_shown {
-        let str = if sector_data.s3.delta > 0.0  { "+" } else { "" };
-        format!("{}{:.2}",str, sector_data.s3.delta)
+        let str = if sector_data.s3.delta > 0.0 { "+" } else { "" };
+        format!("{}{:.2}", str, sector_data.s3.delta)
     } else {
         "-:--".to_string()
     };

@@ -387,3 +387,9 @@ pub fn get_now_ts() -> f64 {
     let since_the_epoch = now.duration_since(UNIX_EPOCH).expect("Time went backwards");
     since_the_epoch.as_secs_f64()
 }
+
+pub fn get_now_ts_mill() -> u128 {
+    let now = SystemTime::now();
+    let since_the_epoch = now.duration_since(UNIX_EPOCH).expect("Time went backwards");
+    since_the_epoch.as_millis()
+}

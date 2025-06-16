@@ -1,13 +1,23 @@
 use eframe::{
-    egui::{self, Area, Color32, FontId, Layout, Rect, RichText, TextureOptions, UiBuilder, Vec2},
-    epaint::CornerRadiusF32,
+    egui::{
+        self, Area, Color32, FontId, Layout, Pos2, Rect, RichText, TextureOptions, UiBuilder, Vec2,
+    },
+    epaint::{CornerRadiusF32, PathShape, PathStroke},
 };
 use image::ImageReader;
-use std::{io::Cursor, sync::atomic::Ordering}; // 用于加载图片
+use std::{
+    collections::BTreeMap,
+    io::Cursor,
+    sync::{atomic::Ordering, MutexGuard},
+};
 
 use crate::{
-    ui::index::{MyApp2, GAME_RACE_DATA, IS_MOUSE_PASS, LAST_TELE_DATA, TEXTURE_HANDLE_MAP},
-    uitl::format_milliseconds_to_mmssms,
+    enums::{CurCarRpmSetting, GameRaceData},
+    ui::index::{
+        MyApp2, CUR_CAR_RPM_SETTING, GAME_RACE_DATA, IS_MOUSE_PASS, LAST_TELE_DATA,
+        TEXTURE_HANDLE_MAP,
+    },
+    uitl::{format_milliseconds_to_mmssms, get_now_ts_mill},
 };
 
 pub fn render_dash(ctx: &egui::Context, app: &mut MyApp2) {
@@ -40,7 +50,8 @@ pub fn render_dash(ctx: &egui::Context, app: &mut MyApp2) {
         // println!("🪵 [sector.rs:48]~ token ~ \x1b[0;32mcur_lap_time\x1b[0m = {} {} {}", cur_lap_time,ts,test_lap);
         return;
     }
-    let race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
+    let mut race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
+    let car_setting = CUR_CAR_RPM_SETTING.get().unwrap().lock().unwrap();
     let texture_map = TEXTURE_HANDLE_MAP.get().unwrap().lock().unwrap();
 
     let res = Area::new("gt_hud".into())
@@ -55,6 +66,7 @@ pub fn render_dash(ctx: &egui::Context, app: &mut MyApp2) {
             let scale_to_base = len / app.setting_data.dash_base_len;
             let desired_size = egui::vec2(len, len / app.setting_data.dash_scale);
             let (rect, _response) = ui.allocate_exact_size(desired_size, egui::Sense::hover());
+            render_arc(ctx, ui, app, rect, &mut race_data, &car_setting);
 
             ui.painter().image(
                 texture_map.get("gt_hud_img").unwrap().id(),
@@ -87,7 +99,7 @@ pub fn render_dash(ctx: &egui::Context, app: &mut MyApp2) {
                 });
             });
 
-            let text_pos = rect.left_top() + Vec2::new(660.0, 56.0); // 距离左上角 10 像素
+            let text_pos = rect.left_top() + Vec2::new(668.0, 56.0); // 距离左上角 10 像素
             let text_size = Vec2::new(180.0, 44.0); // 文本区域宽度比背景小 20，高度 50
             let text_rect_a = Rect::from_min_size(text_pos, text_size);
             ui.allocate_new_ui(UiBuilder::new().max_rect(text_rect_a), |ui_at_rect| {
@@ -102,7 +114,7 @@ pub fn render_dash(ctx: &egui::Context, app: &mut MyApp2) {
                 ui_at_rect.label(
                     RichText::new(gear)
                         .color(Color32::WHITE)
-                        .font(FontId::proportional(60.0)),
+                        .font(FontId::proportional(64.0)),
                 );
             });
 
@@ -118,9 +130,9 @@ pub fn render_dash(ctx: &egui::Context, app: &mut MyApp2) {
             });
 
             let brake = (race_data.brake / 3.03) as f32;
-            let yoffset = 37.0+84.0-brake;
-            let text_pos = rect.left_top() + Vec2::new(380.0, yoffset); // 距离左上角 10 像素
-            // let text_po2 = rect.left_top() + Vec2::new(776.0, 28.0); // 距离左上角 10 像素
+            let yoffset = 37.0 + 84.0 - brake;
+            let text_pos = rect.left_top() + Vec2::new(387.0, yoffset); // 距离左上角 10 像素
+                                                                        // let text_po2 = rect.left_top() + Vec2::new(776.0, 28.0); // 距离左上角 10 像素
             let text_size = Vec2::new(20.0, 100.0); // 文本区域宽度比背景小 20，高度 50
             let text_rect_a = Rect::from_min_size(text_pos, text_size);
             ui.allocate_new_ui(UiBuilder::new().max_rect(text_rect_a), |ui_at_rect| {
@@ -146,9 +158,9 @@ pub fn render_dash(ctx: &egui::Context, app: &mut MyApp2) {
             });
 
             let acc = (race_data.accel / 3.03) as f32;
-            let yoffset = 37.0+84.0-acc;
-            let text_pos = rect.left_top() + Vec2::new(897.0, yoffset); // 距离左上角 10 像素
-            // let text_po2 = rect.left_top() + Vec2::new(776.0, 28.0); // 距离左上角 10 像素
+            let yoffset = 37.0 + 84.0 - acc;
+            let text_pos = rect.left_top() + Vec2::new(911.0, yoffset); // 距离左上角 10 像素
+                                                                        // let text_po2 = rect.left_top() + Vec2::new(776.0, 28.0); // 距离左上角 10 像素
             let text_size = Vec2::new(20.0, 100.0); // 文本区域宽度比背景小 20，高度 50
             let text_rect_a = Rect::from_min_size(text_pos, text_size);
             ui.allocate_new_ui(UiBuilder::new().max_rect(text_rect_a), |ui_at_rect| {
@@ -172,12 +184,486 @@ pub fn render_dash(ctx: &egui::Context, app: &mut MyApp2) {
                     fill_color,
                 );
             });
+
+            render_fuel(
+                ctx,
+                ui,
+                app,
+                rect,
+                &mut race_data,
+                &car_setting,
+                &texture_map,
+            );
+
+            render_tire(ctx, ui, app, rect, &mut race_data, &car_setting);
+            render_boost(
+                ctx,
+                ui,
+                app,
+                rect,
+                &mut race_data,
+                &car_setting,
+                &texture_map,
+            );
         })
         .response;
+
     if res.dragged() {
         app.hud_pos += res.drag_delta();
         // println!("🪵 [dash.rs:76]~ token ~ \x1b[0;32mapp.hud_pos\x1b[0m = {} {}", app.hud_pos.x,app.hud_pos.x,);
     }
+}
+
+fn render_arc(
+    ctx: &egui::Context,
+    ui: &mut egui::Ui,
+    app: &mut MyApp2,
+    rect: Rect,
+    race_data: &mut MutexGuard<'_, GameRaceData>,
+    car_setting: &MutexGuard<'_, CurCarRpmSetting>,
+) {
+    let text_pos = rect.left_top() + Vec2::new(455.0, 56.0);
+    let text_size = Vec2::new(380.0, 180.0); //
+    let text_rect_a = Rect::from_min_size(text_pos, text_size);
+
+    ui.allocate_new_ui(UiBuilder::new().max_rect(text_rect_a), |ui_at_rect| {
+        // ui_at_rect.label(RichText::new("弧线").size(20.0).color(Color32::WHITE).font(FontId::proportional(16.0)));
+        // 获取 Painter 对象用于自定义绘图
+        let painter = ui_at_rect.painter();
+        let half_total_len = 9.54;
+        let total_len = half_total_len * 2.0;
+        let mut end_degree = 270.0 - half_total_len;
+
+        let max_rpm = car_setting.max_rpm.parse::<f64>();
+        let max_rpm = match max_rpm {
+            Ok(max_rpm) => max_rpm,
+            Err(_) => race_data.max_rpm,
+        };
+        let red_rpm = car_setting.red_rpm.parse::<f64>();
+        let red_rpm = match red_rpm {
+            Ok(red_rpm) => red_rpm,
+            Err(_) => max_rpm * 0.9,
+        };
+        let min_show_rpm = max_rpm * 0.70;
+        let mut cur_rpm = race_data.rpm;
+        if cur_rpm > red_rpm {
+            cur_rpm = red_rpm
+        }
+        let percent = (cur_rpm - min_show_rpm) / (red_rpm - min_show_rpm);
+        if race_data.rpm > min_show_rpm {
+            end_degree = end_degree + total_len * percent;
+        }
+
+        // let mut dash_color = Color32::from_rgba_premultiplied(0, 255, 255, 250);
+        let dash_color_blink = Color32::from_rgba_premultiplied(0, 255, 255, 250);
+        let color_per = if percent > 0.45 {
+            percent - 0.45 / percent * 0.45
+        } else {
+            0.0
+        };
+        // 定义起始和结束颜色
+        let r1: f32 = 255.0;
+        let g1: f32 = 0.0;
+        let b1: f32 = 0.0;
+
+        let r2: f32 = 236.0;
+        let g2: f32 = 179.0;
+        let b2: f32 = 255.0;
+        // 使用线性插值计算新的 R, G, B 值
+        let new_r = r1 + (r2 - r1) * color_per as f32;
+        let new_g = g1 + (g2 - g1) * color_per as f32;
+        let new_b = b1 + (b2 - b1) * color_per as f32;
+        let mut dash_color =
+            Color32::from_rgba_premultiplied(new_r as u8, new_g as u8, new_b as u8, 250);
+
+        if race_data.rpm <= red_rpm {
+            race_data.dash_is_blink = false;
+        } else {
+            dash_color = dash_color_blink;
+
+            let now = get_now_ts_mill();
+            // println!(
+            //     "🪵 [dash.rs:263]~ token ~ \x1b[0;32mnow - race_data.dash_blink_ts\x1b[0m = {} {}",
+            //     now, race_data.dash_blink_ts
+            // );
+            if now - race_data.dash_blink_ts > 52 {
+                race_data.dash_is_blink = !race_data.dash_is_blink;
+                race_data.dash_blink_ts = now;
+            }
+        }
+        if race_data.dash_is_blink {
+            // dash_color = dash_color_blink;
+            end_degree = 270.0 - half_total_len;
+        }
+
+        // 定义圆弧的中心位置
+        // 我们将其放置在标签旁边以便观察
+        let center = ui_at_rect.cursor().min + Vec2::new(202.0, 1263.0);
+
+        // **设置半径为 20px**
+        let radius = 1290.0;
+
+        // 定义顶部圆弧的角度范围
+        // 顶部意味着围绕 270 度（或 -90 度）。
+        // 我们选择一个 90 度的扇形（从 225 度到 315 度）来表示 "顶部一小段"。
+        // to_radians() 将角度转换为弧度
+        let start_angle = ((270.0 - half_total_len) as f32).to_radians(); // 225 度
+        let end_angle = (end_degree as f32).to_radians(); // 315 度
+
+        // 生成构成圆弧的点
+        let n_points = 140; // 对于小圆弧，不需要太多点
+        let points: Vec<Pos2> = (0..=n_points)
+            .map(|i| {
+                let angle = start_angle + (end_angle - start_angle) * (i as f32 / n_points as f32);
+                let x = center.x + radius * angle.cos();
+                let y = center.y + radius * angle.sin();
+                Pos2::new(x, y)
+            })
+            .collect();
+
+        // 创建一个路径形状 (PathShape)
+        let arc_shape = PathShape {
+            points,
+            closed: false,              // 设置为 false，使其成为一条线而不是闭合图形
+            fill: Color32::TRANSPARENT, // 无填充色
+            stroke: PathStroke::new(18.0, dash_color), // 设置线条粗细和颜色
+        };
+
+        // 使用 painter 将形状添加到 UI
+        painter.add(arc_shape);
+    });
+}
+
+fn render_fuel(
+    ctx: &egui::Context,
+    ui: &mut egui::Ui,
+    app: &mut MyApp2,
+    rect: Rect,
+    race_data: &mut MutexGuard<'_, GameRaceData>,
+    car_setting: &MutexGuard<'_, CurCarRpmSetting>,
+    texture_map: &MutexGuard<'_, BTreeMap<String, egui::TextureHandle>>,
+) {
+    let text_pos = rect.left_top() + Vec2::new(132.0, 30.0); // 距离左上角 10 像素
+    let text_size = Vec2::new(133.0, 66.0); // 文本区域宽度比背景小 20，高度 50
+    let text_rect_a = Rect::from_min_size(text_pos, text_size);
+
+    ui.allocate_new_ui(UiBuilder::new().max_rect(text_rect_a), |ui_at_rect| {
+        ui_at_rect.painter().image(
+            texture_map.get("fuel_img").unwrap().id(),
+            text_rect_a, // 图片将填充整个面板
+            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)), // UV 坐标 (0.0-1.0)
+            Color32::WHITE, // 图片的色调 (White 表示原色)
+        );
+    });
+
+    ui.allocate_new_ui(UiBuilder::new().max_rect(text_rect_a), |ui_at_rect| {
+        let half_total_len = 90.0;
+        let total_len = half_total_len * 2.0;
+        let mut end_degree = 270.0 - half_total_len;
+        let fuel_percent = race_data.fuel;
+        // println!("🪵 [dash.rs:355]~ token ~ \x1b[0;32mrace_data.fuel\x1b[0m = {}", race_data.fuel);
+        end_degree = end_degree + total_len * fuel_percent;
+        // 定义圆弧的中心位置
+        // 我们将其放置在标签旁边以便观察
+        // ui_at_rect.label(RichText::new("FUEL").color(Color32::WHITE));
+        let center = ui_at_rect.cursor().min + Vec2::new(66.0, 56.0);
+        // let  dash_color = Color32::from_rgba_premultiplied(0, 255, 255, 250);
+
+        // **设置半径为 20px**
+        let radius = 41.0;
+
+        // 定义顶部圆弧的角度范围
+        // 顶部意味着围绕 270 度（或 -90 度）。
+        // 我们选择一个 90 度的扇形（从 225 度到 315 度）来表示 "顶部一小段"。
+        // to_radians() 将角度转换为弧度
+        let start_angle = ((270.0 - half_total_len) as f32).to_radians(); // 225 度
+        let end_angle = (end_degree as f32).to_radians(); // 315 度
+
+        // 生成构成圆弧的点
+        let n_points = 100; // 对于小圆弧，不需要太多点
+        let points: Vec<Pos2> = (0..=n_points)
+            .map(|i| {
+                let angle = start_angle + (end_angle - start_angle) * (i as f32 / n_points as f32);
+                let x = center.x + radius * angle.cos();
+                let y = center.y + radius * angle.sin();
+                Pos2::new(x, y)
+            })
+            .collect();
+
+        // 创建一个路径形状 (PathShape)
+        let arc_shape = PathShape {
+            points,
+            closed: false,              // 设置为 false，使其成为一条线而不是闭合图形
+            fill: Color32::TRANSPARENT, // 无填充色
+            stroke: PathStroke::new(4.0, Color32::WHITE), // 设置线条粗细和颜色
+        };
+        // 使用 painter 将形状添加到 UI
+        ui_at_rect.painter().add(arc_shape);
+    });
+
+    let text_pos = rect.left_top() + Vec2::new(138.0, 96.0); // 距离左上角 10 像素
+    let text_size = Vec2::new(120.0, 26.0); // 文本区域宽度比背景小 20，高度 50
+    let text_rect_a = Rect::from_min_size(text_pos, text_size);
+
+    ui.allocate_new_ui(UiBuilder::new().max_rect(text_rect_a), |ui_at_rect| {
+        // 获取 painter
+        let painter = ui_at_rect.painter();
+
+        // 定义填充颜色: #A2000000 (ARGB) -> 64% 透明度的黑色 (RGBA: 0,0,0,162)
+        let fill_color = Color32::from_rgba_premultiplied(0, 0, 0, 108);
+
+        // 定义圆角半径
+        let corner_radius = 6.0; // 较大的圆角，更明显
+
+        // 绘制填充的圆角矩形
+        painter.rect_filled(
+            text_rect_a,
+            CornerRadiusF32::same(corner_radius), // 所有角的圆角半径相同
+            fill_color,
+        );
+    });
+
+    ui.allocate_new_ui(UiBuilder::new().max_rect(text_rect_a), |ui_at_rect| {
+        ui_at_rect.with_layout(
+            egui::Layout::centered_and_justified(egui::Direction::TopDown),
+            |ui| {
+                ui.label(
+                    RichText::new(format!("已行驶: {:.2}Km", race_data.distance / 1000.0))
+                        .font(FontId::monospace(14.0))
+                        .color(Color32::WHITE), // .size(16.0),
+                );
+            },
+        );
+    });
+}
+
+fn render_tire(
+    ctx: &egui::Context,
+    ui: &mut egui::Ui,
+    app: &mut MyApp2,
+    rect: Rect,
+    race_data: &mut MutexGuard<'_, GameRaceData>,
+    car_setting: &MutexGuard<'_, CurCarRpmSetting>,
+) {
+    let tire1 = race_data.tire_wear1 * 100.0;
+    let remaind_tire1 = 100.0 - tire1;
+    let tire2 = race_data.tire_wear2 * 100.0;
+    let remaind_tire2 = 100.0 - tire2;
+    let tire3 = race_data.tire_wear3 * 100.0;
+    let remaind_tire3 = 100.0 - tire3;
+    let tire4 = race_data.tire_wear4 * 100.0;
+    let remaind_tire4 = 100.0 - tire4;
+
+    let mut render_single_tire =
+        |pos: Vec2, pos_cost_tire: Vec2, tire: f64, remaind_tire: f64, tire_last_lap: f64| {
+            let text_pos = rect.left_top() + pos; // 距离左上角 10 像素
+            let text_size = Vec2::new(14.0, 42.0); // 文本区域宽度比背景小 20，高度 50
+            let text_rect_a = Rect::from_min_size(text_pos, text_size);
+            ui.allocate_new_ui(UiBuilder::new().max_rect(text_rect_a), |ui_at_rect| {
+                // 获取 painter
+                let painter = ui_at_rect.painter();
+
+                // 定义填充颜色: #A2000000 (ARGB) -> 64% 透明度的黑色 (RGBA: 0,0,0,162)
+                let mut fill_color = Color32::from_rgba_premultiplied(255, 255, 255, 250);
+                if remaind_tire < 50.0 && remaind_tire > 40.0 {
+                    fill_color = Color32::from_rgba_premultiplied(227, 191, 12, 250);
+                } else if remaind_tire < 40.0 {
+                    fill_color = Color32::from_rgba_premultiplied(255, 140, 0, 250);
+                }
+                // 定义圆角半径
+                let corner_radius = 2.0; // 较大的圆角，更明显
+
+                // 绘制填充的圆角矩形
+                painter.rect_filled(
+                    text_rect_a,
+                    CornerRadiusF32::same(corner_radius), // 所有角的圆角半径相同
+                    fill_color,
+                );
+            });
+            // println!("🪵 [dash.rs:471]~ token ~ \x1b[0;32m(race_data.tire_wear1 * 42.0)\x1b[0m = {}", (race_data.tire_wear1 * 42.0));
+            let text_size = Vec2::new(14.0, (tire * 42.0) as f32); // 文本区域宽度比背景小 20，高度 50
+            let text_rect_a = Rect::from_min_size(text_pos, text_size);
+            ui.allocate_new_ui(UiBuilder::new().max_rect(text_rect_a), |ui_at_rect| {
+                // 获取 painter
+                let painter = ui_at_rect.painter();
+                // 定义填充颜色: #A2000000 (ARGB) -> 64% 透明度的黑色 (RGBA: 0,0,0,162)
+                let fill_color = Color32::from_rgba_premultiplied(191, 61, 55, 250);
+                // 定义圆角半径
+                let corner_radius = 2.0; // 较大的圆角，更明显
+                                         // 绘制填充的圆角矩形
+                painter.rect_filled(
+                    text_rect_a,
+                    CornerRadiusF32::same(corner_radius), // 所有角的圆角半径相同
+                    fill_color,
+                );
+            });
+            let text_pos = rect.left_top() + pos_cost_tire; // 距离左上角 10 像素
+            let text_size = Vec2::new(32.0, 26.0); // 文本区域宽度比背景小 20，高度 50
+            let text_rect_a = Rect::from_min_size(text_pos, text_size);
+            ui.allocate_new_ui(UiBuilder::new().max_rect(text_rect_a), |ui_at_rect| {
+                ui_at_rect.label(
+                    RichText::new(format!("{:.1}", tire_last_lap))
+                        .font(FontId::monospace(14.0))
+                        .color(Color32::WHITE),
+                );
+            });
+        };
+
+    render_single_tire(
+        Vec2 { x: 10.0, y: 28.0 },
+        Vec2 { x: 6.0, y: 9.0 },
+        race_data.tire_wear1,
+        remaind_tire1,
+        race_data.last_lap_tire_wear1,
+    );
+    render_single_tire(
+        Vec2 { x: 90.0, y: 28.0 },
+        Vec2 { x: 89.0, y: 9.0 },
+        race_data.tire_wear2,
+        remaind_tire2,
+        race_data.last_lap_tire_wear2,
+    );
+    render_single_tire(
+        Vec2 { x: 10.0, y: 88.0 },
+        Vec2 { x: 6.0, y: 130.0 },
+        race_data.tire_wear3,
+        remaind_tire3,
+        race_data.last_lap_tire_wear3,
+    );
+    render_single_tire(
+        Vec2 { x: 90.0, y: 88.0 },
+        Vec2 { x: 89.0, y: 130.0 },
+        race_data.tire_wear4,
+        remaind_tire4,
+        race_data.last_lap_tire_wear4,
+    );
+}
+
+fn render_boost(
+    ctx: &egui::Context,
+    ui: &mut egui::Ui,
+    app: &mut MyApp2,
+    rect: Rect,
+    race_data: &mut MutexGuard<'_, GameRaceData>,
+    car_setting: &MutexGuard<'_, CurCarRpmSetting>,
+    texture_map: &MutexGuard<'_, BTreeMap<String, egui::TextureHandle>>,
+) {
+    let text_pos = rect.left_top() + Vec2::new(1060.0, 4.0); // 距离左上角 10 像素
+    let text_size = Vec2::new(136.8, 148.8); // 文本区域宽度比背景小 20，高度 50
+    let text_rect_a = Rect::from_min_size(text_pos, text_size);
+    let mut boost = race_data.boost;
+    if boost > 100.0 {
+      boost = 100.0;
+    }
+    boost = boost / 100.0;
+    // println!(
+    //     "🪵 [dash.rs:546]~ token ~ \x1b[0;32mboost\x1b[0m = {}",
+    //     boost
+    // );
+
+    ui.allocate_new_ui(UiBuilder::new().max_rect(text_rect_a), |ui_at_rect| {
+        ui_at_rect.painter().image(
+            texture_map.get("turbo_img").unwrap().id(),
+            text_rect_a, // 图片将填充整个面板
+            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)), // UV 坐标 (0.0-1.0)
+            Color32::WHITE, // 图片的色调 (White 表示原色)
+        );
+
+        
+        if boost >= 0.0 {
+          let half_total_len = 90.0;
+          let total_len = half_total_len * 2.0;
+          let mut end_degree = 270.0 - half_total_len;
+          // println!("🪵 [dash.rs:355]~ token ~ \x1b[0;32mrace_data.fuel\x1b[0m = {}", race_data.fuel);
+          // end_degree = end_degree + total_len * 1.0;
+          end_degree = end_degree + total_len * boost;
+          // 定义圆弧的中心位置
+          // 我们将其放置在标签旁边以便观察
+          // ui_at_rect.label(RichText::new("FUEL").color(Color32::WHITE));
+          let center = ui_at_rect.cursor().min + Vec2::new(68.0, 75.0);
+          // let  dash_color = Color32::from_rgba_premultiplied(0, 255, 255, 250);
+  
+          // **设置半径为 20px**
+          let radius = 44.0;
+  
+          // 定义顶部圆弧的角度范围
+          // 顶部意味着围绕 270 度（或 -90 度）。
+          // 我们选择一个 90 度的扇形（从 225 度到 315 度）来表示 "顶部一小段"。
+          // to_radians() 将角度转换为弧度
+          let start_angle = ((270.0 - half_total_len) as f32).to_radians(); // 225 度
+          let end_angle = (end_degree as f32).to_radians(); // 315 度
+            // 生成构成圆弧的点
+            let n_points = 100; // 对于小圆弧，不需要太多点
+            let points: Vec<Pos2> = (0..=n_points)
+                .map(|i| {
+                    let angle =
+                        start_angle + (end_angle - start_angle) * (i as f32 / n_points as f32);
+                    let x = center.x + radius * angle.cos();
+                    let y = center.y + radius * angle.sin();
+                    Pos2::new(x, y)
+                })
+                .collect();
+
+            // 创建一个路径形状 (PathShape)
+            let arc_shape = PathShape {
+                points,
+                closed: false, // 设置为 false，使其成为一条线而不是闭合图形
+                fill: Color32::TRANSPARENT, // 无填充色
+                stroke: PathStroke::new(4.0, Color32::WHITE), // 设置线条粗细和颜色
+            };
+            // 使用 painter 将形状添加到 UI
+            ui_at_rect.painter().add(arc_shape);
+        } else {
+          let boost= boost.abs();
+          let mut zero_degree = 180.0;
+          let half_total_len = 90.0;
+          let total_len = half_total_len ;
+          let diff = total_len * boost*100.0/20.0;
+          zero_degree = zero_degree + total_len - diff;
+          // let total_len = half_total_len * 2.0;
+          let mut end_degree = zero_degree - half_total_len;  //起点
+          // println!("🪵 [dash.rs:355]~ token ~ \x1b[0;32mrace_data.fuel\x1b[0m = {}", race_data.fuel);
+          // end_degree = end_degree + total_len * 1.0;
+          end_degree = end_degree + diff;
+          // println!("🪵 [dash.rs:625]~ token ~ \x1b[0;32mend_degree\x1b[0m = {}", total_len * boost/20.0);
+          // 定义圆弧的中心位置
+          // 我们将其放置在标签旁边以便观察
+          // ui_at_rect.label(RichText::new("FUEL").color(Color32::WHITE));
+          let center = ui_at_rect.cursor().min + Vec2::new(68.0, 75.0);
+          // let  dash_color = Color32::from_rgba_premultiplied(0, 255, 255, 250);
+  
+          // **设置半径为 20px**
+          let radius = 45.0;
+  
+          // 定义顶部圆弧的角度范围
+          // 顶部意味着围绕 270 度（或 -90 度）。
+          // 我们选择一个 90 度的扇形（从 225 度到 315 度）来表示 "顶部一小段"。
+          // to_radians() 将角度转换为弧度
+          let start_angle = ((zero_degree - half_total_len) as f32).to_radians(); // 225 度
+          let end_angle = (end_degree as f32).to_radians(); // 315 度
+            // 生成构成圆弧的点
+            let n_points = 100; // 对于小圆弧，不需要太多点
+            let points: Vec<Pos2> = (0..=n_points)
+                .map(|i| {
+                    let angle =
+                        start_angle + (end_angle - start_angle) * (i as f32 / n_points as f32);
+                    let x = center.x + radius * angle.cos();
+                    let y = center.y + radius * angle.sin();
+                    Pos2::new(x, y)
+                })
+                .collect();
+
+            // 创建一个路径形状 (PathShape)
+            let arc_shape = PathShape {
+                points,
+                closed: false, // 设置为 false，使其成为一条线而不是闭合图形
+                fill: Color32::TRANSPARENT, // 无填充色
+                stroke: PathStroke::new(4.0, Color32::WHITE), // 设置线条粗细和颜色
+            };
+            // 使用 painter 将形状添加到 UI
+            ui_at_rect.painter().add(arc_shape);
+        }
+    });
 }
 
 pub fn load_img(ctx: &egui::Context, app: &mut MyApp2) {
@@ -187,9 +673,9 @@ pub fn load_img(ctx: &egui::Context, app: &mut MyApp2) {
     let image_data3 = include_bytes!("../../resource/turbo_background.png"); // 确保路径正确
     let mut texture_list = TEXTURE_HANDLE_MAP.get().unwrap().lock().unwrap();
 
-    let mut load_fn = |img_data: &[u8], id: &str| {
+    let mut load_fn = |imgd: &[u8], id: &str| {
         // 使用 image crate 解码图片
-        let img = ImageReader::new(Cursor::new(image_data))
+        let img = ImageReader::new(Cursor::new(imgd))
             .with_guessed_format()
             .expect("Failed to guess image format")
             .decode()

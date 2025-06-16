@@ -14,12 +14,12 @@ use eframe::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    enums::{ErrorData, GameRaceData, SectorRecord, SettingData, ShowState, TeleData},
+    enums::{CarSetting, CurCarRpmSetting, ErrorData, GameRaceData, SectorRecord, SettingData, ShowState, TeleData},
     ui::{
         dash::render_dash, other_logic::{
             check_first, check_is_focus, check_udp_run, global_hk, key_listener_focus,
             listen_mouse_pass_event, receive_upd_data, render_error, rev_rx,
-        }, sector::{ render_cross_line, render_sector, render_sight}, setting::render_setting
+        }, sector::{ render_cross_line, render_sector, render_sight}, setting::{load_car_json, render_setting, save_car_json}
     },
     uitl::get_sreen_info,
 };
@@ -45,6 +45,8 @@ pub static LAST_TELE_DATA: OnceLock<Mutex<BTreeMap<String, f32>>> = OnceLock::ne
 pub static SECTOR_RECORD_DATA: OnceLock<Mutex<SectorRecord>> = OnceLock::new();
 pub static GAME_RACE_DATA: OnceLock<Mutex<GameRaceData>> = OnceLock::new();
 pub static TEXTURE_HANDLE_MAP: OnceLock<Mutex<BTreeMap<String, egui::TextureHandle>>> = OnceLock::new();
+pub static CAR_SETTING: OnceLock<Mutex<CarSetting>> = OnceLock::new();
+pub static CUR_CAR_RPM_SETTING: OnceLock<Mutex<CurCarRpmSetting>> = OnceLock::new();
 
 pub static RESTART_UDP_FLAG: OnceLock<AtomicBool> = OnceLock::new();
 pub static ERROR_SHOW_FLAG: OnceLock<AtomicBool> = OnceLock::new();
@@ -114,6 +116,7 @@ pub fn main() -> eframe::Result {
                         //     Box::new(|cc| Ok(Box::new(MyApp2::new(cc)))),
                         // )
                         // key_listener();
+    load_car_json();
     SECTORID.set(Id::new("sector")).unwrap();
     let (tx, rx) = mpsc::channel::<TeleData>();
     RXHOLDER.set(Mutex::new(rx)).unwrap();
@@ -134,6 +137,7 @@ pub fn main() -> eframe::Result {
     SECTOR_RECORD_DATA.set(Mutex::new(SectorRecord::default())).unwrap();
     GAME_RACE_DATA.set(Mutex::new(GameRaceData::default())).unwrap();
     let _ = TEXTURE_HANDLE_MAP.set(Mutex::new(BTreeMap::new()));
+    CUR_CAR_RPM_SETTING.set(Mutex::new(CurCarRpmSetting::default())).unwrap();
     global_hk();
 
     receive_upd_data();
@@ -377,6 +381,10 @@ impl eframe::App for MyApp2 {
         }
     }
 
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        save_car_json();
+    }
+
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         // egui 默认会将大部分 UI 状态（包括窗口位置）保存到 storage 中。
         // 你也可以保存你自己的应用状态，例如：
@@ -405,11 +413,13 @@ impl eframe::App for MyApp2 {
         // render_white_overlay(ctx, self);
         render_cross_line(ctx);
 
+
         render_sector(ctx, self);
         render_sight(ctx, self);
-        render_dash(ctx, self);
 
         render_setting(ctx, self);
+        render_dash(ctx, self);
+
         render_error(ctx, self, _frame);
     }
 }

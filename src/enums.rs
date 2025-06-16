@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use core::str;
-use std::{ sync::OnceLock};
+use serde::{Deserialize, Serialize};
+use std::{collections::BTreeMap, sync::OnceLock};
 
 // pub const GT_FONT_PATH: &str = "./arkitech_medium.ttf";
 pub const GT_FONT_PATH: &str = "./resource/arkitech_medium.ttf";
@@ -8,9 +8,7 @@ pub const GT_FONT_PATH: &str = "./resource/arkitech_medium.ttf";
 // pub const BASE_FONT_PATH: &str = "./ArialMonospace.ttf";
 pub const BASE_FONT_PATH: &str = "./resource/ArialMonospace.ttf";
 
-
 pub static USER: OnceLock<String> = OnceLock::new();
-
 
 // pub fn get_gt_font_path() -> String {
 //     let current_exe_path = env::current_exe().expect("获取当前可执行文件路径失败");
@@ -38,7 +36,6 @@ pub struct MyData<T> {
     // 其他字段
 }
 
-
 pub struct MyApp {
     pub value: f32,
 }
@@ -56,9 +53,9 @@ pub struct TeleData {
 }
 impl Default for TeleData {
     fn default() -> Self {
-        Self { 
+        Self {
             speed: 0.0,
-            close: false 
+            close: false,
         }
     }
 }
@@ -71,27 +68,29 @@ pub struct ShowState {
     pub show_sector: bool,
     pub show_sight: bool,
     pub show_complist: bool,
-    pub show_dash:bool,
-    pub show_history:bool
+    pub show_dash: bool,
+    pub show_history: bool,
+    pub show_other: bool,
 }
 
 impl Default for ShowState {
     fn default() -> Self {
-        Self { 
+        Self {
             show_setting: false,
             show_info: false,
             show_sector: true,
             show_sight: true,
             show_complist: false,
-            show_dash:true,
-            show_history:true
+            show_dash: true,
+            show_history: true,
+            show_other: false,
         }
     }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 
-pub struct  SettingData{
+pub struct SettingData {
     pub ip: String,
     pub port: String,
     pub sector_len: String,
@@ -99,60 +98,93 @@ pub struct  SettingData{
     pub sector_base_len: f32,
     pub sector_delta_len: f32,
     pub sector_delta_scale: f32,
-    // pub sector_delta_scale_ss3: f32,
-
-
+    // pub sector_delta_scale_ss4: f32,
     pub sight_len: String,
-    pub sight_scale:f32,
+    pub sight_scale: f32,
     pub sight_base_len: f32,
-
 
     pub dash_len: String,
     pub dash_scale: f32,
-    pub dash_base_len: f32
+    pub dash_base_len: f32,
 }
 
 impl Default for SettingData {
     fn default() -> Self {
-        Self { 
-           ip: "127.0.0.1".to_string(),
-           port: "8000".to_string(),
+        Self {
+            ip: "127.0.0.1".to_string(),
+            port: "8000".to_string(),
 
-           sector_len: "210".to_string(),
-           sector_scale:5.25,  //长宽比
-           sector_base_len: 210.0,
-           sector_delta_len: 90.0,
-           sector_delta_scale: 2.25,
-        //    sector_delta_scale_ss3: 3.0,
+            sector_len: "210".to_string(),
+            sector_scale: 5.25, //长宽比
+            sector_base_len: 210.0,
+            sector_delta_len: 90.0,
+            sector_delta_scale: 2.25,
+            //    sector_delta_scale_ss4: 3.0,
+            sight_len: "14".to_string(),
+            sight_scale: 1.0,
+            sight_base_len: 14.0,
 
-           sight_len: "14".to_string(),
-           sight_scale: 1.0,
-           sight_base_len: 14.0,
-
-           dash_len: "1280".to_string(),
-           dash_scale: 8.0,
-           dash_base_len: 1280.0
+            dash_len: "1280".to_string(),
+            dash_scale: 8.0,
+            dash_base_len: 1280.0,
         }
     }
 }
 
-pub struct  ErrorData {
-    pub message: String
+pub struct ErrorData {
+    pub message: String,
 }
+
+#[derive(Serialize, Deserialize, Debug,Clone)]
+
+pub struct CarSetting {
+    pub rpm: BTreeMap<u16, Vec<String>>, //车辆id , [最大转速, 红线转速]
+}
+
+impl Default for CarSetting {
+    fn default() -> Self {
+        Self {
+            rpm: BTreeMap::new(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug,Clone)]
+pub struct  CurCarRpmSetting {
+    pub car_id: u16,
+    pub max_rpm: String,
+    pub red_rpm: String
+}
+
+impl Default for CurCarRpmSetting {
+    fn default() -> Self {
+        Self {
+           car_id:0,
+           max_rpm: "".to_string(),
+           red_rpm: "".to_string(),
+        }
+    }
+}
+
+// #[derive(Serialize, Deserialize, Debug)]
+
+// pub struct CarSettingRpm {
+
+// }
 
 #[derive(Serialize, Deserialize, Debug)]
 
 pub struct SectorRecord {
-    pub s1:LapControl,
-    pub s2:LapControl,
-    pub s3:LapControl
+    pub s1: LapControl,
+    pub s2: LapControl,
+    pub s3: LapControl,
 }
 impl Default for SectorRecord {
     fn default() -> Self {
-        Self { 
-            s1:LapControl::default(),
-            s2:LapControl::default(),
-            s3:LapControl::default(),
+        Self {
+            s1: LapControl::default(),
+            s2: LapControl::default(),
+            s3: LapControl::default(),
         }
     }
 }
@@ -206,7 +238,7 @@ pub struct LapControl {
     pub s1_last_time: f64,
     pub s2_last_time: f64,
     pub s3_record: f64,
-    pub last_lap_s: f64
+    pub last_lap_s: f64,
 }
 
 impl Default for LapControl {
@@ -255,19 +287,20 @@ impl Default for LapControl {
             s1_last_time: 0.0,
             s2_last_time: 0.0,
             s3_record: 0.0,
-            last_lap_s: 0.0
+            last_lap_s: 0.0,
         }
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct GameRaceData{
+pub struct GameRaceData {
     pub lap: i32,
     pub current_lap: i32,
     pub sub_current_lap: i32,
     pub distance: f64,
     pub sub_distance: f64,
     pub race_time: f64,
+    pub fuel: f64,
     pub current_time: f64,
     pub track_id: u16,
     pub is_in_pit: bool,
@@ -282,10 +315,25 @@ pub struct GameRaceData{
     pub car_id: i32,
     pub best_lap_time: f64,
     pub max_rpm: f64,
+    pub dash_is_blink:bool,
+    pub dash_blink_ts:u128,
+    pub boost: f64,
+    pub tire_wear1:f64, //左前右前,左后右后
+    pub tire_wear2:f64,
+    pub tire_wear3:f64,
+    pub tire_wear4:f64,
+    pub last_lap_tire_wear1:f64,
+    pub last_lap_tire_wear2:f64,
+    pub last_lap_tire_wear3:f64,
+    pub last_lap_tire_wear4:f64,
+    pub lap_start_tire_wear1:f64,
+    pub lap_start_tire_wear2:f64,
+    pub lap_start_tire_wear3:f64,
+    pub lap_start_tire_wear4:f64,
 }
 impl Default for GameRaceData {
     fn default() -> Self {
-        Self { 
+        Self {
             lap: 0,
             current_lap: 0,
             distance: 0.0,
@@ -305,10 +353,25 @@ impl Default for GameRaceData {
             steer: 0.0,
             car_id: 0,
             best_lap_time: 0.0,
-            max_rpm: 0.0
+            max_rpm: 0.0,
+            dash_is_blink:false,
+            dash_blink_ts:0,
+            fuel:0.0,
+            boost:0.0,
+            tire_wear1:0.0,
+            tire_wear2:0.0,
+            tire_wear3:0.0,
+            tire_wear4:0.0,
+            last_lap_tire_wear1:0.0,
+            last_lap_tire_wear2:0.0,
+            last_lap_tire_wear3:0.0,
+            last_lap_tire_wear4:0.0,
+            lap_start_tire_wear1:0.0,
+            lap_start_tire_wear2:0.0,
+            lap_start_tire_wear3:0.0,
+            lap_start_tire_wear4:0.0,
         }
     }
 }
 
-pub struct DashData {
-}
+pub struct DashData {}

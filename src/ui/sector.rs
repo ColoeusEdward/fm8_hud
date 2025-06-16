@@ -78,7 +78,7 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
             let painter = ui.painter();
 
             // 定义填充颜色: #A2000000 (ARGB) -> 64% 透明度的黑色 (RGBA: 0,0,0,162)
-            let fill_color = Color32::from_rgba_premultiplied(0, 0, 0, 168);
+            let fill_color = Color32::from_rgba_premultiplied(0, 0, 0, 128);
 
             // 定义圆角半径
             let corner_radius = 6.0; // 较大的圆角，更明显
@@ -457,6 +457,23 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
         if race_data.current_lap > race_data.sub_current_lap && race_data.distance > 0.0 {
             race_data.sub_current_lap = race_data.current_lap;
             race_data.sub_distance = race_data.distance;
+            
+            if race_data.tire_wear1 < race_data.lap_start_tire_wear1 {
+                race_data.lap_start_tire_wear1 = 0.0;
+                race_data.lap_start_tire_wear2 = 0.0;
+                race_data.lap_start_tire_wear3 = 0.0;
+                race_data.lap_start_tire_wear4 = 0.0;
+            }
+
+            race_data.last_lap_tire_wear1 = (race_data.tire_wear1 - race_data.lap_start_tire_wear1) * 100.0;
+            race_data.last_lap_tire_wear2 = (race_data.tire_wear2 - race_data.lap_start_tire_wear2) * 100.0;
+            race_data.last_lap_tire_wear3 = (race_data.tire_wear3 - race_data.lap_start_tire_wear3) * 100.0;
+            race_data.last_lap_tire_wear4 = (race_data.tire_wear4 - race_data.lap_start_tire_wear4) * 100.0;
+
+            race_data.lap_start_tire_wear1 = race_data.tire_wear1;
+            race_data.lap_start_tire_wear2 = race_data.tire_wear2;
+            race_data.lap_start_tire_wear3 = race_data.tire_wear3;
+            race_data.lap_start_tire_wear4 = race_data.tire_wear4;
             // println!("🪵 [sector.rs:458]~ token ~ \x1b[0;32mrace_data.distance;\x1b[0m = {}", race_data.distance);
         }
         if race_data.distance < race_data.sub_distance {
@@ -483,13 +500,13 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
             sector_data.s1.is_done = false;
             sector_data.s2.is_done = false;
 
-            // if distence > 0.0  && distence < 2.0 {
-            // println!(
-            //     "🪵 [sector.rs:477]~ token ~ \x1b[0;32mace_data.lap \x1b[0m = {} {} {} {}",
-            //     !sector_data.s3.is_done,
-            //     race_data.lap > 1, race_data.lap, race_data.current_lap
-            // );
-            // }
+            if distence > 0.0  && distence < 2.0 {
+            println!(
+                "🪵 [sector.rs:477]~ token ~ \x1b[0;32mace_data.lap \x1b[0m = {} {} {} {} ",
+                !sector_data.s3.is_done,
+                 sector_data.s3.current_s_time, race_data.lap, race_data.current_lap
+            );
+            }
             
             if !sector_data.s3.is_done && race_data.lap > -1 && sector_data.s3.current_s_time > 0.0 {
                 
@@ -557,7 +574,7 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
             //     );
             // }
         } else if distence >= track_info.s2_end as f64 && distence < track_info.length as f64 {
-            // sector_data.s2.is_done = true;
+            sector_data.s3.is_done = false;
 
             if !sector_data.s2.is_done {
                 sector_data.s2.is_done = true;
@@ -929,6 +946,30 @@ pub fn update_race_data(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> () {
         None => 0.0,
     };
     game_race_data.max_rpm = match tele_data.get("EngineMaxRpm") {
+        Some(last_lap_time) => last_lap_time.clone() as f64,
+        None => 0.0,
+    };
+    game_race_data.fuel = match tele_data.get("Fuel") {
+        Some(last_lap_time) => last_lap_time.clone() as f64,
+        None => 0.0,
+    };
+    game_race_data.boost = match tele_data.get("Boost") {
+        Some(last_lap_time) => last_lap_time.clone() as f64,
+        None => 0.0,
+    };
+    game_race_data.tire_wear1 = match tele_data.get("TireWearFrontLeft") {
+        Some(last_lap_time) => last_lap_time.clone() as f64,
+        None => 0.0,
+    };
+    game_race_data.tire_wear2 = match tele_data.get("TireWearFrontRight") {
+        Some(last_lap_time) => last_lap_time.clone() as f64,
+        None => 0.0,
+    };
+    game_race_data.tire_wear3 = match tele_data.get("TireWearRearLeft") {
+        Some(last_lap_time) => last_lap_time.clone() as f64,
+        None => 0.0,
+    };
+    game_race_data.tire_wear4 = match tele_data.get("TireWearRearRight") {
         Some(last_lap_time) => last_lap_time.clone() as f64,
         None => 0.0,
     };

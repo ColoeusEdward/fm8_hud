@@ -106,6 +106,10 @@ pub struct SettingData {
     pub dash_len: String,
     pub dash_scale: f32,
     pub dash_base_len: f32,
+
+    pub history_len: String,
+    pub history_scale: f32,
+    pub history_base_len: f32
 }
 
 impl Default for SettingData {
@@ -127,6 +131,10 @@ impl Default for SettingData {
             dash_len: "1280".to_string(),
             dash_scale: 8.0,
             dash_base_len: 1280.0,
+
+            history_len: "170".to_string(),
+            history_scale: 0.4028,
+            history_base_len: 160.0
         }
     }
 }
@@ -334,6 +342,8 @@ pub struct GameRaceData {
     pub tire_slip2:f64,
     pub tire_slip3:f64,
     pub tire_slip4:f64,
+    pub lap_history:Vec<f64>,
+    pub lap_history_str:Vec<String>,
 }
 impl Default for GameRaceData {
     fn default() -> Self {
@@ -378,6 +388,8 @@ impl Default for GameRaceData {
             lap_start_tire_wear2:0.0,
             lap_start_tire_wear3:0.0,
             lap_start_tire_wear4:0.0,
+            lap_history:Vec::new(),
+            lap_history_str:Vec::new(),
         }
     }
 }

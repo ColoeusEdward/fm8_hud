@@ -238,6 +238,26 @@ pub fn render_complist(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, 
                         // );
                     });
 
+                    ui.horizontal(|ui| {
+                        ui.checkbox(
+                            &mut app.show_state.show_history,
+                            RichText::new("圈速历史")
+                                .color(egui::Color32::WHITE)
+                                .font(egui::FontId::proportional(14.0)),
+                        );
+
+                        ui.add_space(68.0);
+                        ui.label(
+                            RichText::new("长度")
+                                .color(egui::Color32::WHITE)
+                                .font(egui::FontId::proportional(14.0)),
+                        );
+                        ui.add(
+                            TextEdit::singleline(&mut app.setting_data.history_len)
+                                .desired_width(80.0),
+                        );
+                    });
+
                     ui.separator();
 
                     ui.horizontal(|ui| {

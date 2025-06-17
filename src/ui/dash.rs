@@ -291,7 +291,7 @@ fn render_arc(
         }
 
         // let mut dash_color = Color32::from_rgba_premultiplied(0, 255, 255, 250);
-        let dash_color_blink = Color32::from_rgba_premultiplied(0, 255, 255, 250);
+        let dash_color_blink = Color32::from_rgba_premultiplied(0, 255, 255, 255);
         let color_per = if percent > 0.45 {
             percent - 0.45 / percent * 0.45
         } else {
@@ -310,7 +310,7 @@ fn render_arc(
         let new_g = g1 + (g2 - g1) * color_per as f32;
         let new_b = b1 + (b2 - b1) * color_per as f32;
         let mut dash_color =
-            Color32::from_rgba_premultiplied(new_r as u8, new_g as u8, new_b as u8, 250);
+            Color32::from_rgba_premultiplied(new_r as u8, new_g as u8, new_b as u8, 255);
 
         if race_data.rpm <= red_rpm {
             race_data.dash_is_blink = false;
@@ -766,6 +766,8 @@ pub fn load_img(ctx: &egui::Context, app: &mut MyApp2) {
     let image_data = include_bytes!("../../resource/GT_hud_LITE_VERSION5.png"); // 确保路径正确
     let image_data2 = include_bytes!("../../resource/fuel_background.png"); // 确保路径正确
     let image_data3 = include_bytes!("../../resource/turbo_background.png"); // 确保路径正确
+    let image_data4 = include_bytes!("../../resource/gap_gradient.png"); // 确保路径正确
+    let image_data5 = include_bytes!("../../resource/fl_gradient.png"); // 确保路径正确
     let mut texture_list = TEXTURE_HANDLE_MAP.get().unwrap().lock().unwrap();
 
     let mut load_fn = |imgd: &[u8], id: &str| {
@@ -797,4 +799,6 @@ pub fn load_img(ctx: &egui::Context, app: &mut MyApp2) {
     load_fn(image_data, "gt_hud_img");
     load_fn(image_data2, "fuel_img");
     load_fn(image_data3, "turbo_img");
+    load_fn(image_data4, "history_img");
+    load_fn(image_data5, "history_best_img");
 }

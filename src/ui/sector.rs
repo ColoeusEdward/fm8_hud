@@ -402,6 +402,13 @@ pub fn reset_race_data(race_data:&mut MutexGuard<'_, GameRaceData>) {
     race_data.lap_start_tire_wear3 = 0.0;
     race_data.lap_start_tire_wear4 = 0.0;
 }
+pub fn reset_lap_history(race_data:&mut MutexGuard<'_, GameRaceData>) {
+    if race_data.current_lap + 1 <= race_data.lap_history.len() as i32 {
+        println!("🪵 [sector.rs:406]~ token ~ \x1b[0;32mrace_data.current_lap + 1\x1b[0m = {} {}", race_data.current_lap + 1,race_data.lap_history.len());
+        race_data.lap_history.clear();
+        race_data.lap_history_str.clear();
+    }
+}
 pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, bool, String) {
     //return (sector_time,delta_show,delta)
     let mut sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
@@ -421,6 +428,7 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
         reset_lap_control(&mut sector_data.s2);
         reset_lap_control(&mut sector_data.s3);
         reset_race_data(&mut race_data);
+        reset_lap_history(&mut race_data);
         return (
             format_milliseconds_to_mmssms((race_data.current_time * 1000.0) as u32),
             false,
@@ -432,6 +440,7 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
         change_track(&mut sector_data.s2, &race_data);
         change_track(&mut sector_data.s3, &race_data);
         reset_race_data(&mut race_data);
+        reset_lap_history(&mut race_data);
     }
     if !sector_data.s1.initialized {
         init_s_record(&mut sector_data.s1, &track_info, 1);
@@ -469,6 +478,14 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
     //-------------------------------------------------
 
     if race_data.current_time > 0.0 {
+        if race_data.lap > - 1 {
+            let last_time = race_data.last_lap_time;
+            reset_lap_history(&mut race_data);
+            if race_data.lap_history.len() < race_data.current_lap as usize {
+                race_data.lap_history.push(last_time);
+                race_data.lap_history_str.push(format_milliseconds_to_mmssms((last_time * 1000.0) as u32));
+            }
+        }
         if race_data.current_lap > race_data.sub_current_lap && race_data.distance > 0.0 {
             race_data.sub_current_lap = race_data.current_lap;
             race_data.sub_distance = race_data.distance;
@@ -703,190 +720,6 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
     }
 
     return (output, delta_show, delta);
-}
-
-pub fn sector_logic(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, bool, String) {
-    //return (sector_time,delta_show,delta)
-    let mut sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
-    // let game_race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
-    update_race_data(tele_data);
-    let race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
-
-    let track_info = get_track_data_map(&race_data.track_id);
-    // println!("🪵 [sector.rs:398]~ token ~ \x1b[0;32m&race_data.track_id\x1b[0m = {}", &race_data.track_id);
-    let cur_sector_time = race_data.race_time - race_data.current_time;
-    if race_data.race_time <= 0.3 {
-        println!(
-            "🪵 [sector.rs:401]~ token ~ \x1b[0;32mrace_data.race_time <= 0.3 \x1b[0m = {}",
-            race_data.race_time <= 0.3
-        );
-        reset_lap_control(&mut sector_data.s1);
-        reset_lap_control(&mut sector_data.s2);
-        reset_lap_control(&mut sector_data.s3);
-        return (
-            format_milliseconds_to_mmssms((race_data.current_time * 1000.0) as u32),
-            false,
-            "0.00".to_string(),
-        );
-    }
-    if race_data.track_id != sector_data.s1.last_track_id {
-        change_track(&mut sector_data.s1, &race_data);
-        change_track(&mut sector_data.s2, &race_data);
-        change_track(&mut sector_data.s3, &race_data);
-    }
-    if !sector_data.s1.initialized {
-        init_s_record(&mut sector_data.s1, &track_info, 1);
-    }
-    if !sector_data.s2.initialized {
-        init_s_record(&mut sector_data.s2, &track_info, 2);
-    }
-    init_s_record(&mut sector_data.s3, &track_info, 3);
-
-    //---------------------
-    if race_data.lap == 0 && race_data.distance == -(track_info.length as f64) {
-        //跳圈检测
-        sector_data.s1.jumped_lap = -1;
-        sector_data.s2.jumped_lap = -1;
-        sector_data.s3.jumped_lap = -1;
-        // sector_data.s3.jumped_lap = -1;
-    } else if race_data.distance < -100.0 {
-        //数据重置
-        set_lap_control_when_nega_distence(&mut sector_data.s1, &race_data, 1);
-        set_lap_control_when_nega_distence(&mut sector_data.s2, &race_data, 2);
-        set_lap_control_when_nega_distence(&mut sector_data.s3, &race_data, 3);
-    }
-    //-------------------------------------------------
-
-    if race_data.race_time < 0.0
-        || race_data.distance < 0.0
-        || race_data.is_in_pit == true
-        || race_data.lap == 0
-    {
-        // println!("🪵 [sector.rs:443]~ token ~ \x1b[0;32mrace_data.lap == 0\x1b[0m = {}", race_data.lap == 0);
-        return (
-            format_milliseconds_to_mmssms((race_data.current_time * 1000.0) as u32),
-            false,
-            "0.00".to_string(),
-        );
-    }
-
-    when_cur_lap_diff(&mut sector_data.s1, &race_data, 1);
-    when_cur_lap_diff(&mut sector_data.s2, &race_data, 2);
-    when_cur_lap_diff(&mut sector_data.s3, &race_data, 3);
-
-    if race_data.race_time < 0.0 || race_data.distance < 0.0 || race_data.is_in_pit == true {
-        return (
-            format_milliseconds_to_mmssms((race_data.current_time * 1000.0) as u32),
-            false,
-            "0.00".to_string(),
-        );
-    }
-
-    let lap_distence_s1 = calc_lap_distence(&mut sector_data.s1, &race_data, 1);
-    let lap_distence_s2 = calc_lap_distence(&mut sector_data.s2, &race_data, 2);
-    let lap_distence_s3 = calc_lap_distence(&mut sector_data.s3, &race_data, 3);
-
-    let (is_moving_forward_s1, prev_distance_s1) =
-        calc_moving_forward(&mut sector_data.s1, &race_data, 1, lap_distence_s1);
-    let (is_moving_forward_s2, prev_distance_s2) =
-        calc_moving_forward(&mut sector_data.s2, &race_data, 2, lap_distence_s2);
-    let (is_moving_forward_s3, prev_distance_s3) =
-        calc_moving_forward(&mut sector_data.s3, &race_data, 3, lap_distence_s3);
-
-    check_is_done(
-        &mut sector_data.s1,
-        &race_data,
-        1,
-        lap_distence_s1,
-        is_moving_forward_s1,
-    );
-    check_is_done(
-        &mut sector_data.s2,
-        &race_data,
-        2,
-        lap_distence_s2,
-        is_moving_forward_s2,
-    );
-
-    if sector_data.s3.s1_time == 0.0 && lap_distence_s3 >= sector_data.s3.s1_end {
-        sector_data.s3.s1_time = sector_data.s1.current_s_time;
-        sector_data.s3.s1_last_time = sector_data.s3.s1_time;
-        // if lap_distence_s3 >= sector_data.s3.s1_end{
-        // }
-    }
-    if sector_data.s3.s1_time > 0.0
-        && sector_data.s3.s2_time == 0.0
-        && lap_distence_s3 >= sector_data.s3.s2_end
-    {
-        sector_data.s3.s2_time = sector_data.s2.current_s_time;
-        sector_data.s3.s2_last_time = sector_data.s3.s2_time;
-        sector_data.s3.current_s_time =
-            race_data.current_time - sector_data.s3.s1_time - sector_data.s3.s2_time;
-    }
-
-    let show_current_time_s1 =
-        race_data.race_time <= sector_data.s1.delta_until && race_data.current_time > 0.3;
-    let show_current_time_s2 =
-        race_data.race_time <= sector_data.s2.delta_until && race_data.current_time > 0.3;
-    let show_current_time_s3 =
-        race_data.race_time <= sector_data.s3.delta_until && race_data.current_time > 0.01;
-
-    let output: String;
-    if show_current_time_s1 || (!sector_data.s1.is_done && !show_current_time_s3) {
-        // println!("🪵 [sector.rs:517]~ token ~ \x1b[0;32mis_done\x1b[0m = {}", "s1");
-        let cur_time = if !show_current_time_s1 {
-            race_data.current_time
-        } else {
-            sector_data.s1.current_s_time
-        };
-        output = format_milliseconds_to_mmssms((cur_time * 1000.0) as u32);
-    } else if show_current_time_s2
-        || (sector_data.s1.is_done && !sector_data.s2.is_done && !show_current_time_s3)
-    {
-        // println!("🪵 [sector.rs:517]~ token ~ \x1b[0;32mis_done\x1b[0m = {}", "s2");
-        let cur_time = if !show_current_time_s2 {
-            println!(
-                "🪵 [sector.rs:528]~ token ~ \x1b[0;32mrace_data.current_time \x1b[0m = {} {}",
-                race_data.current_time, sector_data.s2.sector_start_time
-            );
-            race_data.current_time - sector_data.s2.sector_start_time
-        } else {
-            sector_data.s2.current_s_time
-        };
-        output = format_milliseconds_to_mmssms((cur_time * 1000.0) as u32);
-    } else {
-        println!(
-            "🪵 [sector.rs:517]~ token ~ \x1b[0;32mis_done\x1b[0m = {}",
-            "s3"
-        );
-
-        let cur_time = if !show_current_time_s3 {
-            race_data.current_time - sector_data.s3.sector_start_time
-        } else {
-            sector_data.s3.s3_time
-        };
-        output = format_milliseconds_to_mmssms((cur_time * 1000.0) as u32);
-    }
-
-    let mut delta = 0.0;
-    if show_current_time_s1 {
-        delta = sector_data.s1.delta;
-    } else if show_current_time_s2 {
-        delta = sector_data.s2.delta;
-    } else if show_current_time_s3 {
-        delta = sector_data.s3.delta;
-    }
-    let delta = if delta <= 0.0 {
-        format!("{:.2}", delta)
-    } else {
-        format!("+{:.2}", delta)
-    };
-    // println!("🪵 [sector.rs:537]~ token ~ \x1b[0;32moutput\x1b[0m = {}", output);
-    return (
-        output,
-        show_current_time_s1 || show_current_time_s2 || show_current_time_s3,
-        delta,
-    );
 }
 
 pub fn update_race_data(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> () {

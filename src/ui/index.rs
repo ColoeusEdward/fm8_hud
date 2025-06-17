@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     enums::{CarSetting, CurCarRpmSetting, ErrorData, GameRaceData, SectorRecord, SettingData, ShowState, TeleData},
     ui::{
-        dash::render_dash, other_logic::{
+        dash::render_dash, lap_history::render_history, other_logic::{
             check_first, check_is_focus, check_udp_run, global_hk, key_listener_focus,
             listen_mouse_pass_event, receive_upd_data, render_error, rev_rx,
         }, sector::{ render_cross_line, render_sector, render_sight}, setting::{load_car_json, render_setting, save_car_json}
@@ -77,6 +77,7 @@ pub struct MyApp2 {
     pub show_state: ShowState,
     pub setting_data: SettingData,
     pub hud_pos: Pos2,
+    pub history_pos: Pos2,
 }
 
 impl MyApp2 {
@@ -100,6 +101,7 @@ impl MyApp2 {
             show_state: ShowState::default(),
             setting_data: SettingData::default(),
             hud_pos: Pos2 { x: 339.0, y: 339.0 },
+            history_pos: Pos2 { x: 1209.0, y: 472.0 },
         }
     }
 }
@@ -419,6 +421,7 @@ impl eframe::App for MyApp2 {
 
         render_setting(ctx, self);
         render_dash(ctx, self);
+        render_history(ctx, self);
 
         render_error(ctx, self, _frame);
     }

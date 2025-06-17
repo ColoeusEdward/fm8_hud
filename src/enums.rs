@@ -330,6 +330,10 @@ pub struct GameRaceData {
     pub lap_start_tire_wear2:f64,
     pub lap_start_tire_wear3:f64,
     pub lap_start_tire_wear4:f64,
+    pub tire_slip1:f64,
+    pub tire_slip2:f64,
+    pub tire_slip3:f64,
+    pub tire_slip4:f64,
 }
 impl Default for GameRaceData {
     fn default() -> Self {
@@ -362,6 +366,10 @@ impl Default for GameRaceData {
             tire_wear2:0.0,
             tire_wear3:0.0,
             tire_wear4:0.0,
+            tire_slip1:0.0,
+            tire_slip2:0.0,
+            tire_slip3:0.0,
+            tire_slip4:0.0,
             last_lap_tire_wear1:0.0,
             last_lap_tire_wear2:0.0,
             last_lap_tire_wear3:0.0,

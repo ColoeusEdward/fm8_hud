@@ -86,7 +86,7 @@ pub fn init_udp(app: &mut MyApp2) -> Result<(), String> {
         // let mut buffer = [0u8; 1024]; // Adjust buffer size as needed
         let mut buffer = [0u8; 1500]; // Typical MTU for Ethernet
                                       // let (tx, _) = mpsc::channel::<UdpDataPayload>(1024); // Buffer size 1024
-        let name_list = ["IsRaceOn","EngineMaxRpm","CurrentEngineRpm","CarOrdinal","CarClass", "CarPerformanceIndex","Speed","Power", "Torque","TireTempFrontLeft","TireTempFrontRight","TireTempRearLeft","TireTempRearRight","Boost","Fuel","DistanceTraveled","BestLap","LastLap","CurrentLap","CurrentRaceTime","LapNumber","RacePosition","Accel","Brake","Clutch","Gear","Steer","TireWearFrontLeft","TireWearFrontRight","TireWearRearLeft","TireWearRearRight","TrackOrdinal"];
+        let name_list = ["IsRaceOn","EngineMaxRpm","CurrentEngineRpm","TireCombinedSlipFrontLeft","TireCombinedSlipFrontRight","TireCombinedSlipRearLeft","TireCombinedSlipRearRight","CarOrdinal","CarClass", "CarPerformanceIndex","Speed","Power", "Torque","TireTempFrontLeft","TireTempFrontRight","TireTempRearLeft","TireTempRearRight","Boost","Fuel","DistanceTraveled","BestLap","LastLap","CurrentLap","CurrentRaceTime","LapNumber","RacePosition","Accel","Brake","Clutch","Gear","Steer","TireWearFrontLeft","TireWearFrontRight","TireWearRearLeft","TireWearRearRight","TrackOrdinal"];
         // let field_map:BTreeMap<String, > = BTreeMap::new();
         let field_vec = TELEMETRY_FIELDS
             .iter()

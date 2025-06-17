@@ -22,9 +22,7 @@ use crate::{
 };
 
 pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
-    if !app.show_state.show_sector {
-        return;
-    }
+
     let tele_data = LAST_TELE_DATA.get().unwrap().lock().unwrap();
     let cur_lap_time = tele_data.get("CurrentLap");
     let cur_lap_time = match cur_lap_time {
@@ -46,12 +44,15 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
     //     Some(is_race_on) => is_race_on,
     //     None => &0.0,
     // }.clone() as i32;
-    if cur_lap_time == "00:00:000" && is_mouse_pass {
-        // let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
-        // println!("🪵 [sector.rs:48]~ token ~ \x1b[0;32mcur_lap_time\x1b[0m = {} {} {}", cur_lap_time,ts,test_lap);
+    let (sector_time, delta_show, delta) = sector_logic2(&tele_data);
+    // if cur_lap_time == "00:00:000" && is_mouse_pass {
+    //     // let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+    //     // println!("🪵 [sector.rs:48]~ token ~ \x1b[0;32mcur_lap_time\x1b[0m = {} {} {}", cur_lap_time,ts,test_lap);
+    //     return;
+    // }
+    if !app.show_state.show_sector {
         return;
     }
-    let (sector_time, delta_show, delta) = sector_logic2(&tele_data);
     let mut scale_to_base_s: f32 = 1.0;
     // println!("🪵 [sector.rs:17]~ token ~ \x1b[0;32mtele_data\x1b[0m = {}", is_race_on);
     let res = Area::new(*SECTORID.get().unwrap())
@@ -389,7 +390,18 @@ pub fn render_bg(
         )
     });
 }
+pub fn reset_race_data(race_data:&mut MutexGuard<'_, GameRaceData>) {
+    // race_data.current_time = 0.0;
+    race_data.last_lap_tire_wear1 = 0.0;
+    race_data.last_lap_tire_wear2 = 0.0;
+    race_data.last_lap_tire_wear3 = 0.0;
+    race_data.last_lap_tire_wear4 = 0.0;
 
+    race_data.lap_start_tire_wear1 = 0.0;
+    race_data.lap_start_tire_wear2 = 0.0;
+    race_data.lap_start_tire_wear3 = 0.0;
+    race_data.lap_start_tire_wear4 = 0.0;
+}
 pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, bool, String) {
     //return (sector_time,delta_show,delta)
     let mut sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
@@ -408,6 +420,7 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
         reset_lap_control(&mut sector_data.s1);
         reset_lap_control(&mut sector_data.s2);
         reset_lap_control(&mut sector_data.s3);
+        reset_race_data(&mut race_data);
         return (
             format_milliseconds_to_mmssms((race_data.current_time * 1000.0) as u32),
             false,
@@ -418,6 +431,7 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
         change_track(&mut sector_data.s1, &race_data);
         change_track(&mut sector_data.s2, &race_data);
         change_track(&mut sector_data.s3, &race_data);
+        reset_race_data(&mut race_data);
     }
     if !sector_data.s1.initialized {
         init_s_record(&mut sector_data.s1, &track_info, 1);
@@ -450,6 +464,7 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
         set_lap_control_when_nega_distence(&mut sector_data.s1, &race_data, 1);
         set_lap_control_when_nega_distence(&mut sector_data.s2, &race_data, 2);
         set_lap_control_when_nega_distence(&mut sector_data.s3, &race_data, 3);
+        reset_race_data(&mut race_data);
     }
     //-------------------------------------------------
 
@@ -457,7 +472,7 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
         if race_data.current_lap > race_data.sub_current_lap && race_data.distance > 0.0 {
             race_data.sub_current_lap = race_data.current_lap;
             race_data.sub_distance = race_data.distance;
-            
+
             if race_data.tire_wear1 < race_data.lap_start_tire_wear1 {
                 race_data.lap_start_tire_wear1 = 0.0;
                 race_data.lap_start_tire_wear2 = 0.0;
@@ -970,6 +985,22 @@ pub fn update_race_data(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> () {
         None => 0.0,
     };
     game_race_data.tire_wear4 = match tele_data.get("TireWearRearRight") {
+        Some(last_lap_time) => last_lap_time.clone() as f64,
+        None => 0.0,
+    };
+    game_race_data.tire_slip1 = match tele_data.get("TireCombinedSlipFrontLeft") {
+        Some(last_lap_time) => last_lap_time.clone() as f64,
+        None => 0.0,
+    };
+    game_race_data.tire_slip2 = match tele_data.get("TireCombinedSlipFrontRight") {
+        Some(last_lap_time) => last_lap_time.clone() as f64,
+        None => 0.0,
+    };
+    game_race_data.tire_slip3 = match tele_data.get("TireCombinedSlipRearLeft") {
+        Some(last_lap_time) => last_lap_time.clone() as f64,
+        None => 0.0,
+    };
+    game_race_data.tire_slip4 = match tele_data.get("TireCombinedSlipRearRight") {
         Some(last_lap_time) => last_lap_time.clone() as f64,
         None => 0.0,
     };

@@ -10,8 +10,7 @@ use crate::{
     enums::CarSetting,
     ui::index::{CAR_SETTING, CUR_CAR_RPM_SETTING, GAME_RACE_DATA, IS_MOUSE_PASS},
 };
-use eframe::egui::{self, Align, Area, FontId, Layout, Pos2,  RichText, TextEdit};
-
+use eframe::egui::{self, Align, Area, FontId, Layout, Pos2, RichText, TextEdit};
 
 pub fn render_setting(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2) {
     let is_mouse_pass = IS_MOUSE_PASS
@@ -228,15 +227,15 @@ pub fn render_complist(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, 
                         );
 
                         ui.add_space(68.0);
-                        ui.label(
-                            RichText::new("长度")
-                                .color(egui::Color32::WHITE)
-                                .font(egui::FontId::proportional(14.0)),
-                        );
-                        ui.add(
-                            TextEdit::singleline(&mut app.setting_data.dash_len)
-                                .desired_width(80.0),
-                        );
+                        // ui.label(
+                        //     RichText::new("长度")
+                        //         .color(egui::Color32::WHITE)
+                        //         .font(egui::FontId::proportional(14.0)),
+                        // );
+                        // ui.add(
+                        //     TextEdit::singleline(&mut app.setting_data.dash_len)
+                        //         .desired_width(80.0),
+                        // );
                     });
 
                     ui.separator();
@@ -258,134 +257,134 @@ pub fn render_other(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, ui:
     if btn.clicked() {
         app.show_state.show_other = !app.show_state.show_other;
     }
+    let race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
+    let mut cur_car_rpm_setting = CUR_CAR_RPM_SETTING.get().unwrap().lock().unwrap();
     let mut car_setting = CAR_SETTING.get().unwrap().lock().unwrap();
+    let id = race_data.car_id.clone() as u16;
+    if id == 0 {
+        return;
+    }
+    if car_setting.rpm.get(&id).is_none() {
+        let mut vec = Vec::<String>::new();
+        let maxr = race_data.max_rpm as i32;
+        let red_rpm = (race_data.max_rpm * 0.9) as i32;
+        vec.push(maxr.to_string());
+        vec.push(red_rpm.to_string());
+        car_setting.rpm.insert(id, vec);
+    }
+    let car_rpm_item: &Vec<String> = car_setting.rpm.get(&id).unwrap();
+    if cur_car_rpm_setting.car_id == 0 || cur_car_rpm_setting.car_id != id {
+        cur_car_rpm_setting.car_id = id;
+        cur_car_rpm_setting.max_rpm = car_rpm_item[0].clone();
+        cur_car_rpm_setting.red_rpm = car_rpm_item[1].clone();
+    }
 
     if app.show_state.show_other {
         let screen_rect = ctx.screen_rect();
-        let race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
-        let mut cur_car_rpm_setting = CUR_CAR_RPM_SETTING.get().unwrap().lock().unwrap();
+
         let pos = Pos2::new(screen_rect.right() + 100.0, screen_rect.top() + 28.0);
-        Area::new("setting_other".into()).current_pos(pos).show(ctx, |ui| {
-            // 创建一个自定义的 Frame 样式
-            let frame = egui::Frame::window(&ctx.style())
-            // .widget_rect(Rect::new(0.0, 0.0, 300.0, 300.0))
-                .fill(egui::Color32::from_rgb(50, 50, 50)) // 矩形背景颜色
-                .stroke(egui::Stroke::new(2.0, egui::Color32::LIGHT_BLUE)) // 边框
-                .corner_radius(5.0) // 圆角
-                .inner_margin(10.0); // 内部边距
+        Area::new("setting_other".into())
+            .current_pos(pos)
+            .show(ctx, |ui| {
+                // 创建一个自定义的 Frame 样式
+                let frame = egui::Frame::window(&ctx.style())
+                    // .widget_rect(Rect::new(0.0, 0.0, 300.0, 300.0))
+                    .fill(egui::Color32::from_rgb(50, 50, 50)) // 矩形背景颜色
+                    .stroke(egui::Stroke::new(2.0, egui::Color32::LIGHT_BLUE)) // 边框
+                    .corner_radius(5.0) // 圆角
+                    .inner_margin(10.0); // 内部边距
 
-            // 在这个 Frame 中绘制内容
-            frame.show(ui, |ui| {
-                ui.heading("其他信息");
-                ui.separator();
-                ui.horizontal(|ui| {
-                    ui.label(
-                        RichText::new("当前赛道Id: ")
-                            .color(egui::Color32::WHITE)
-                            .font(FontId::monospace(14.0))
-
-                    );
-
-                    ui.label(
-                        RichText::new(race_data.track_id.to_string())
-                            .color(egui::Color32::WHITE)
-                            .font(FontId::monospace(14.0))
-
-                    );
-                    // ui.checkbox(&mut app.show_state.show_sector, RichText::new("当前赛道Id")
-                    // .color(egui::Color32::WHITE)
-                    // .font(egui::FontId::proportional(14.0)),);
-
-                    // ui.add_space(40.0);
-                    // ui.label(RichText::new("长度")
-                    // .color(egui::Color32::WHITE)
-                    // .font(egui::FontId::proportional(14.0)));
-                    // ui.add(TextEdit::singleline(&mut app.setting_data.sector_len).desired_width(80.0));
-                });
-                ui.horizontal(|ui| {
-                    ui.label(
-                        RichText::new("当前车辆Id: ")
-                            .color(egui::Color32::WHITE)
-                            .font(FontId::monospace(14.0))
-                            // .family(egui::FontFamily::Name("base".into()))
-                            // .size(14.0),
-                    );
-
-                    ui.label(
-                        RichText::new(race_data.car_id.to_string())
-                            .color(egui::Color32::WHITE)
-                            .font(FontId::monospace(14.0))
-
-                    );
-                    
-                    let id = race_data.car_id.clone() as u16;
-                    if id == 0 {
-                        return;
-                    }
-                    if car_setting.rpm.get(&id).is_none() {
-                        let mut vec = Vec::<String>::new();
-                        let maxr = race_data.max_rpm as i32;
-                        let red_rpm = (race_data.max_rpm * 0.9) as i32;
-                        vec.push(maxr.to_string());
-                        vec.push(red_rpm.to_string());
-                        car_setting.rpm.insert(id, vec);
-                    }
-                    let car_rpm_item: &Vec<String> = car_setting.rpm.get(&id).unwrap();
-                    if cur_car_rpm_setting.car_id == 0 || cur_car_rpm_setting.car_id != id {
-                        cur_car_rpm_setting.car_id = id;
-                        cur_car_rpm_setting.max_rpm = car_rpm_item[0].clone();
-                        cur_car_rpm_setting.red_rpm = car_rpm_item[1].clone();
-                    }
-
-                    ui.add_space(10.0);
-                    ui.label(
-                        RichText::new("最高转速")
-                            .color(egui::Color32::WHITE)
-                            .font(egui::FontId::monospace(14.0)),
-                    );
-                    let res = ui.add(
-                        TextEdit::singleline(&mut cur_car_rpm_setting.max_rpm).desired_width(70.0),
-                    );
-
-                    ui.add_space(10.0);
-                    ui.label(
-                        RichText::new("红线转速")
-                            .color(egui::Color32::WHITE)
-                            .font(egui::FontId::monospace(14.0)),
-                    );
-                    let res = ui.add(
-                        TextEdit::singleline(&mut cur_car_rpm_setting.red_rpm).desired_width(70.0),
-                    );
-
-                    ui.add_space(10.0);
-                    let btn = ui.button("保存");
-                    if btn.clicked() {
-                        car_setting.rpm.insert(
-                            id,
-                            vec![
-                                cur_car_rpm_setting.max_rpm.clone(),
-                                cur_car_rpm_setting.red_rpm.clone(),
-                            ],
+                // 在这个 Frame 中绘制内容
+                frame.show(ui, |ui| {
+                    ui.heading("其他信息");
+                    ui.separator();
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new("当前赛道Id: ")
+                                .color(egui::Color32::WHITE)
+                                .font(FontId::monospace(14.0)),
                         );
-                        tokio::spawn(async move { save_car_json() });
-                    }
-                });
 
-                // ui.horizontal(|ui| {
-                    
-                // });
+                        ui.label(
+                            RichText::new(race_data.track_id.to_string())
+                                .color(egui::Color32::WHITE)
+                                .font(FontId::monospace(14.0)),
+                        );
+                        // ui.checkbox(&mut app.show_state.show_sector, RichText::new("当前赛道Id")
+                        // .color(egui::Color32::WHITE)
+                        // .font(egui::FontId::proportional(14.0)),);
 
-                ui.separator();
+                        // ui.add_space(40.0);
+                        // ui.label(RichText::new("长度")
+                        // .color(egui::Color32::WHITE)
+                        // .font(egui::FontId::proportional(14.0)));
+                        // ui.add(TextEdit::singleline(&mut app.setting_data.sector_len).desired_width(80.0));
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new("当前车辆Id: ")
+                                .color(egui::Color32::WHITE)
+                                .font(FontId::monospace(14.0)), // .family(egui::FontFamily::Name("base".into()))
+                                                                // .size(14.0),
+                        );
 
-                ui.horizontal(|ui| {
-                    ui.add_space(460.0);
+                        ui.label(
+                            RichText::new(race_data.car_id.to_string())
+                                .color(egui::Color32::WHITE)
+                                .font(FontId::monospace(14.0)),
+                        );
 
-                    if ui.button("关闭").clicked() {
-                        app.show_state.show_other = false;
-                    }
+                        ui.add_space(10.0);
+                        ui.label(
+                            RichText::new("最高转速")
+                                .color(egui::Color32::WHITE)
+                                .font(egui::FontId::monospace(14.0)),
+                        );
+                        let res = ui.add(
+                            TextEdit::singleline(&mut cur_car_rpm_setting.max_rpm)
+                                .desired_width(70.0),
+                        );
+
+                        ui.add_space(10.0);
+                        ui.label(
+                            RichText::new("红线转速")
+                                .color(egui::Color32::WHITE)
+                                .font(egui::FontId::monospace(14.0)),
+                        );
+                        let res = ui.add(
+                            TextEdit::singleline(&mut cur_car_rpm_setting.red_rpm)
+                                .desired_width(70.0),
+                        );
+
+                        ui.add_space(10.0);
+                        let btn = ui.button("保存");
+                        if btn.clicked() {
+                            car_setting.rpm.insert(
+                                id,
+                                vec![
+                                    cur_car_rpm_setting.max_rpm.clone(),
+                                    cur_car_rpm_setting.red_rpm.clone(),
+                                ],
+                            );
+                            tokio::spawn(async move { save_car_json() });
+                        }
+                    });
+
+                    // ui.horizontal(|ui| {
+
+                    // });
+
+                    ui.separator();
+
+                    ui.horizontal(|ui| {
+                        ui.add_space(460.0);
+
+                        if ui.button("关闭").clicked() {
+                            app.show_state.show_other = false;
+                        }
+                    });
                 });
             });
-        });
     }
 }
 

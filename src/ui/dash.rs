@@ -446,7 +446,7 @@ fn render_fuel(
         let painter = ui_at_rect.painter();
 
         // 定义填充颜色: #A2000000 (ARGB) -> 64% 透明度的黑色 (RGBA: 0,0,0,162)
-        let fill_color = Color32::from_rgba_premultiplied(0, 0, 0, 108);
+        let fill_color = Color32::from_rgba_premultiplied(67, 65, 65, 108);
 
         // 定义圆角半径
         let corner_radius = 18.0; // 较大的圆角，更明显
@@ -615,7 +615,7 @@ fn render_tire(
 
     render_single_tire(
         Vec2 { x: 10.0, y: 28.0 },
-        Vec2 { x: 6.0, y: 6.0 },
+        Vec2 { x: 5.0, y: 6.0 },
         race_data.tire_wear1,
         remaind_tire1,
         race_data.last_lap_tire_wear1,
@@ -623,7 +623,7 @@ fn render_tire(
     );
     render_single_tire(
         Vec2 { x: 90.0, y: 28.0 },
-        Vec2 { x: 89.0, y: 6.0 },
+        Vec2 { x: 86.0, y: 6.0 },
         race_data.tire_wear2,
         remaind_tire2,
         race_data.last_lap_tire_wear2,
@@ -631,7 +631,7 @@ fn render_tire(
     );
     render_single_tire(
         Vec2 { x: 10.0, y: 88.0 },
-        Vec2 { x: 6.0, y: 133.0 },
+        Vec2 { x: 5.0, y: 133.0 },
         race_data.tire_wear3,
         remaind_tire3,
         race_data.last_lap_tire_wear3,
@@ -639,7 +639,7 @@ fn render_tire(
     );
     render_single_tire(
         Vec2 { x: 90.0, y: 88.0 },
-        Vec2 { x: 89.0, y: 133.0 },
+        Vec2 { x: 86.0, y: 133.0 },
         race_data.tire_wear4,
         remaind_tire4,
         race_data.last_lap_tire_wear4,

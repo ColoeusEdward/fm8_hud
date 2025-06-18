@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, sync::{atomic::Ordering, Mutex, MutexGuard}};
+use std::{collections::BTreeMap, sync::{atomic::Ordering,  MutexGuard}};
 
 use eframe::{
     egui::{self, Area, Color32, Rect, RichText, Stroke, StrokeKind, UiBuilder, Vec2},

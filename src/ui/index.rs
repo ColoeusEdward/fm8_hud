@@ -18,7 +18,7 @@ use crate::{
     ui::{
         dash::render_dash, lap_history::render_history, other_logic::{
             check_first, check_is_focus, check_is_min, check_udp_run, global_hk, key_listener_focus, listen_mouse_pass_event, receive_upd_data, render_error, rev_rx
-        }, sector::{ render_cross_line, render_sector, render_sight}, setting::{self, load_car_json, render_setting, save_car_json}
+        }, sector::{ render_cross_line, render_sector, render_sight}, setting::{load_car_json, render_setting, save_car_json}
     },
     uitl::get_sreen_info,
 };

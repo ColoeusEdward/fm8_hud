@@ -17,15 +17,16 @@ use crate::{
     enums::{CarSetting, CurCarRpmSetting, ErrorData, GameRaceData, SectorRecord, SettingData, ShowState, TeleData},
     ui::{
         dash::render_dash, lap_history::render_history, other_logic::{
-            check_first, check_is_focus, check_udp_run, global_hk, key_listener_focus,
-            listen_mouse_pass_event, receive_upd_data, render_error, rev_rx,
-        }, sector::{ render_cross_line, render_sector, render_sight}, setting::{load_car_json, render_setting, save_car_json}
+            check_first, check_is_focus, check_is_min, check_udp_run, global_hk, key_listener_focus, listen_mouse_pass_event, receive_upd_data, render_error, rev_rx
+        }, sector::{ render_cross_line, render_sector, render_sight}, setting::{self, load_car_json, render_setting, save_car_json}
     },
     uitl::get_sreen_info,
 };
 
 pub static IS_FIRST: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
 pub static IS_MOUSE_PASS: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
+pub static IS_MIN: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
+pub static IS_UDP_REDIRECT: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
 pub static LAST_IS_MOUSE_PASS: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
 pub static NEED_FIX_POS: OnceLock<Mutex<AtomicBool>> = OnceLock::new();
 pub static SECTORID: OnceLock<Id> = OnceLock::new();
@@ -140,6 +141,7 @@ pub fn main() -> eframe::Result {
     GAME_RACE_DATA.set(Mutex::new(GameRaceData::default())).unwrap();
     let _ = TEXTURE_HANDLE_MAP.set(Mutex::new(BTreeMap::new()));
     CUR_CAR_RPM_SETTING.set(Mutex::new(CurCarRpmSetting::default())).unwrap();
+    IS_MIN.set(Mutex::new(AtomicBool::new(false))).unwrap();
     global_hk();
 
     receive_upd_data();
@@ -199,6 +201,7 @@ pub fn main() -> eframe::Result {
                 MyApp2::new(cc)
             };
 
+            IS_UDP_REDIRECT.set(Mutex::new(AtomicBool::new(app.setting_data.is_redirect))).unwrap();
             // replace_fonts(&cc.egui_ctx);
             add_font(&cc.egui_ctx);
             reset_myapp(&mut app);
@@ -413,6 +416,8 @@ impl eframe::App for MyApp2 {
 
         // test_transparent(ctx, self);
         // render_white_overlay(ctx, self);
+        if check_is_min(ctx, self) { return; } // render_min(ctx, app)
+        
         render_cross_line(ctx);
 
 

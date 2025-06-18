@@ -402,11 +402,11 @@ fn render_fuel(
         // 定义圆弧的中心位置
         // 我们将其放置在标签旁边以便观察
         // ui_at_rect.label(RichText::new("FUEL").color(Color32::WHITE));
-        let center = ui_at_rect.cursor().min + Vec2::new(66.0, 56.0);
+        let center = ui_at_rect.cursor().min + Vec2::new(65.0, 57.0);
         // let  dash_color = Color32::from_rgba_premultiplied(0, 255, 255, 250);
 
         // **设置半径为 20px**
-        let radius = 41.0;
+        let radius = 44.0;
 
         // 定义顶部圆弧的角度范围
         // 顶部意味着围绕 270 度（或 -90 度）。
@@ -437,7 +437,40 @@ fn render_fuel(
         ui_at_rect.painter().add(arc_shape);
     });
 
-    let text_pos = rect.left_top() + Vec2::new(138.0, 96.0); // 距离左上角 10 像素
+
+    let text_pos = rect.left_top() + Vec2::new(182.0, 68.0); // 距离左上角 10 像素
+    let text_size = Vec2::new(35.5, 35.5); // 文本区域宽度比背景小 20，高度 50
+    let text_rect_a = Rect::from_min_size(text_pos, text_size);
+    ui.allocate_new_ui(UiBuilder::new().max_rect(text_rect_a), |ui_at_rect| {
+        // 获取 painter
+        let painter = ui_at_rect.painter();
+
+        // 定义填充颜色: #A2000000 (ARGB) -> 64% 透明度的黑色 (RGBA: 0,0,0,162)
+        let fill_color = Color32::from_rgba_premultiplied(0, 0, 0, 108);
+
+        // 定义圆角半径
+        let corner_radius = 18.0; // 较大的圆角，更明显
+
+        // 绘制填充的圆角矩形
+        painter.rect_filled(
+            text_rect_a,
+            CornerRadiusF32::same(corner_radius), // 所有角的圆角半径相同
+            fill_color,
+        );
+    });
+    let text_pos = text_pos + Vec2::new(7.0, 5.0); // 距离左上角 10 像素
+    let text_size = Vec2::new(23.1 ,24.85); // 文本区域宽度比背景小 20，高度 50
+    let text_rect_a = Rect::from_min_size(text_pos, text_size);
+    ui.allocate_new_ui(UiBuilder::new().max_rect(text_rect_a), |ui_at_rect| {
+        ui_at_rect.painter().image(
+            texture_map.get("fuel_icon").unwrap().id(),
+            text_rect_a, // 图片将填充整个面板
+            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)), // UV 坐标 (0.0-1.0)
+            Color32::WHITE, // 图片的色调 (White 表示原色)
+        );
+    });
+
+    let text_pos = rect.left_top() + Vec2::new(138.0, 106.0); // 距离左上角 10 像素
     let text_size = Vec2::new(120.0, 26.0); // 文本区域宽度比背景小 20，高度 50
     let text_rect_a = Rect::from_min_size(text_pos, text_size);
 
@@ -768,6 +801,7 @@ pub fn load_img(ctx: &egui::Context, app: &mut MyApp2) {
     let image_data3 = include_bytes!("../../resource/turbo_background.png"); // 确保路径正确
     let image_data4 = include_bytes!("../../resource/gap_gradient.png"); // 确保路径正确
     let image_data5 = include_bytes!("../../resource/fl_gradient.png"); // 确保路径正确
+    let image_data6 = include_bytes!("../../resource/fuel_inner.png"); // 确保路径正确
     let mut texture_list = TEXTURE_HANDLE_MAP.get().unwrap().lock().unwrap();
 
     let mut load_fn = |imgd: &[u8], id: &str| {
@@ -801,4 +835,5 @@ pub fn load_img(ctx: &egui::Context, app: &mut MyApp2) {
     load_fn(image_data3, "turbo_img");
     load_fn(image_data4, "history_img");
     load_fn(image_data5, "history_best_img");
+    load_fn(image_data6, "fuel_icon");
 }

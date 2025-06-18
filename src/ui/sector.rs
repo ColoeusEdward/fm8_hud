@@ -4,7 +4,6 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Mutex, MutexGuard,
     },
-    time::Duration,
 };
 
 use eframe::{
@@ -18,7 +17,7 @@ use crate::{
     ui::index::{
         MyApp2, GAME_RACE_DATA, IS_MOUSE_PASS, LAST_TELE_DATA, SECTORID, SECTOR_RECORD_DATA,
     },
-    uitl::{format_milliseconds_to_mmssms, get_now_ts},
+    uitl::{format_milliseconds_to_mmssms, get_now_ts, get_now_ts_mill},
 };
 
 pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
@@ -397,10 +396,12 @@ pub fn reset_race_data(race_data:&mut MutexGuard<'_, GameRaceData>) {
     race_data.last_lap_tire_wear3 = 0.0;
     race_data.last_lap_tire_wear4 = 0.0;
 
-    race_data.lap_start_tire_wear1 = 0.0;
-    race_data.lap_start_tire_wear2 = 0.0;
-    race_data.lap_start_tire_wear3 = 0.0;
-    race_data.lap_start_tire_wear4 = 0.0;
+    race_data.lap_start_tire_wear1 = race_data.tire_wear1;
+    race_data.lap_start_tire_wear2 = race_data.tire_wear2;
+    race_data.lap_start_tire_wear3 = race_data.tire_wear3;
+    race_data.lap_start_tire_wear4 = race_data.tire_wear4;
+
+    race_data.sub_current_lap = 0;
 }
 pub fn reset_lap_history(race_data:&mut MutexGuard<'_, GameRaceData>) {
     if race_data.current_lap + 1 <= race_data.lap_history.len() as i32 {
@@ -459,6 +460,11 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
         sector_data.s1.jumped_lap = -1;
         sector_data.s2.jumped_lap = -1;
         sector_data.s3.jumped_lap = -1;
+
+        set_lap_control_when_nega_distence(&mut sector_data.s1, &race_data, 1);
+        set_lap_control_when_nega_distence(&mut sector_data.s2, &race_data, 2);
+        set_lap_control_when_nega_distence(&mut sector_data.s3, &race_data, 3);
+        reset_race_data(&mut race_data);
         // sector_data.s3.jumped_lap = -1;
     } else if race_data.distance < -100.0 {
         // if (race_data.current_time as i32 % 5) == 0 {
@@ -478,6 +484,7 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
     //-------------------------------------------------
 
     if race_data.current_time > 0.0 {
+        
         if race_data.lap > - 1 {
             let last_time = race_data.last_lap_time;
             reset_lap_history(&mut race_data);
@@ -486,32 +493,54 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
                 race_data.lap_history_str.push(format_milliseconds_to_mmssms((last_time * 1000.0) as u32));
             }
         }
+
+        
+        
+        // println!("🪵 [sector.rs:494]~ token ~ \x1b[0;32mrace_data.current_lap > race_data.sub_current_lap\x1b[0m = {} {}", race_data.current_lap , race_data.sub_current_lap);
+
         if race_data.current_lap > race_data.sub_current_lap && race_data.distance > 0.0 {
+        println!("🪵 [sector.rs:494]~ token ~ \x1b[0;32mrace_data.current_lap > race_data.sub_current_lap\x1b[0m = {} {}", race_data.current_lap , race_data.sub_current_lap);
             race_data.sub_current_lap = race_data.current_lap;
             race_data.sub_distance = race_data.distance;
 
-            if race_data.tire_wear1 < race_data.lap_start_tire_wear1 {
-                race_data.lap_start_tire_wear1 = 0.0;
-                race_data.lap_start_tire_wear2 = 0.0;
-                race_data.lap_start_tire_wear3 = 0.0;
-                race_data.lap_start_tire_wear4 = 0.0;
-            }
-
+            // println!("🪵 [sector.rs:522]~ token ~ \x1b[0;32mdistence\x1b[0m = {}", distence);
             race_data.last_lap_tire_wear1 = (race_data.tire_wear1 - race_data.lap_start_tire_wear1) * 100.0;
             race_data.last_lap_tire_wear2 = (race_data.tire_wear2 - race_data.lap_start_tire_wear2) * 100.0;
             race_data.last_lap_tire_wear3 = (race_data.tire_wear3 - race_data.lap_start_tire_wear3) * 100.0;
             race_data.last_lap_tire_wear4 = (race_data.tire_wear4 - race_data.lap_start_tire_wear4) * 100.0;
 
-            race_data.lap_start_tire_wear1 = race_data.tire_wear1;
-            race_data.lap_start_tire_wear2 = race_data.tire_wear2;
-            race_data.lap_start_tire_wear3 = race_data.tire_wear3;
-            race_data.lap_start_tire_wear4 = race_data.tire_wear4;
-            // println!("🪵 [sector.rs:458]~ token ~ \x1b[0;32mrace_data.distance;\x1b[0m = {}", race_data.distance);
+            race_data.lap_start_tire_wear1 =race_data.tire_wear1;
+            race_data.lap_start_tire_wear2 =race_data.tire_wear2;
+            race_data.lap_start_tire_wear3 =race_data.tire_wear3;
+            race_data.lap_start_tire_wear4 =race_data.tire_wear4;
+
+            if race_data.last_lap_tire_wear1 > 1.0 {
+                race_data.last_save_lap_tire_wear1 = race_data.last_lap_tire_wear1;
+                race_data.last_save_lap_tire_wear2 = race_data.last_lap_tire_wear2;
+                race_data.last_save_lap_tire_wear3 = race_data.last_lap_tire_wear3;
+                race_data.last_save_lap_tire_wear4 = race_data.last_lap_tire_wear4;
+            }
+
+        //     // if race_data.tire_wear1 < race_data.lap_start_tire_wear1 {
+                
+        //     // }
+
+        //     // println!("🪵 [sector.rs:458]~ token ~ \x1b[0;32mrace_data.distance;\x1b[0m = {}", race_data.distance);
         }
         if race_data.distance < race_data.sub_distance {
             race_data.sub_distance = 0.0;
         }
-        let distence = race_data.distance - race_data.sub_distance;
+        let mut distence = race_data.distance - race_data.sub_distance;
+        
+        if distence > track_info.length as f64 {  //兜底检测
+            race_data.sub_distance = race_data.distance;
+            distence = 0.0;
+        }
+        
+        // println!("🪵 [sector.rs:521]~ token ~ \x1b[0;32mdistence\x1b[0m = {}", distence);
+        // if distence >= 0.0  && distence < 2.0 {
+           
+        // }
 
         // if (race_data.current_time as i32 % 5) == 0 {
         // println!(
@@ -528,19 +557,21 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
         //     race_data.distance
         // };
         // println!("🪵 [sector.rs:454]~ token ~ \x1b[0;32mdistence\x1b[0m = {}", track_info.length as f64 * race_data.current_lap as f64);
-        if distence > 0.0 && distence < track_info.s1_end as f64 {
+        if distence >= 0.0 && distence < track_info.s1_end as f64 {
             sector_data.s1.is_done = false;
             sector_data.s2.is_done = false;
+            sector_data.s2.time_shown = false;
 
-            if distence > 0.0  && distence < 2.0 {
+
+            if distence >= 0.0  && distence < 2.0 {
             println!(
                 "🪵 [sector.rs:477]~ token ~ \x1b[0;32mace_data.lap \x1b[0m = {} {} {} {} ",
                 !sector_data.s3.is_done,
-                 sector_data.s3.current_s_time, race_data.lap, race_data.current_lap
+                 sector_data.s3.current_s_time, race_data.distance - distence, track_info.length
             );
             }
             
-            if !sector_data.s3.is_done && race_data.lap > -1 && sector_data.s3.current_s_time > 0.0 {
+            if !sector_data.s3.is_done && race_data.distance - distence >= track_info.length as f64 && sector_data.s3.current_s_time > 0.0 {
                 
 
                 // println!("🪵 [sector.rs:477]~ token ~ \x1b[0;32mace_data.lap \x1b[0m = {}", race_data.lap );
@@ -555,12 +586,20 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
                     "🪵 [sector.rs:507]~ token ~ \x1b[0;32msector_data.s1.delta\x1b[0m = s3/{}",
                     sector_data.s3.delta
                 );
+                race_data.delta_show_ts = get_now_ts_mill();
 
-                tokio::spawn(async move {
-                    tokio::time::sleep(Duration::from_millis(5000)).await;
-                    let mut sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
+                // tokio::spawn(async move {
+                //     tokio::time::sleep(Duration::from_millis(5000)).await;
+                //     let mut sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
+                //     sector_data.s3.time_shown = false;
+                // });
+            }
+            if sector_data.s3.time_shown {
+                let now = get_now_ts_mill();
+                if now - race_data.delta_show_ts >= 5000 {
                     sector_data.s3.time_shown = false;
-                });
+                    sector_data.s3.is_done = true;
+                }
             }
 
             sector_data.s1.current_s_time = race_data.current_time;
@@ -575,6 +614,7 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
         } else if distence >= track_info.s1_end as f64 && distence < track_info.s2_end as f64 {
             // sector_data.s1.is_done = true;
             sector_data.s3.is_done = false;
+            sector_data.s3.time_shown = false;
             sector_data.s2.is_done = false;
 
             if !sector_data.s1.is_done {
@@ -589,11 +629,19 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
                     "🪵 [sector.rs:507]~ token ~ \x1b[0;32msector_data.s1.delta\x1b[0m = s1/{}",
                     sector_data.s1.delta
                 );
-                tokio::spawn(async move {
-                    tokio::time::sleep(Duration::from_millis(5000)).await;
-                    let mut sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
+                race_data.delta_show_ts = get_now_ts_mill();
+                // tokio::spawn(async move {
+                //     tokio::time::sleep(Duration::from_millis(5000)).await;
+                //     let mut sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
+                //     sector_data.s1.time_shown = false;
+                // });
+            }
+            if sector_data.s1.time_shown {
+                let now = get_now_ts_mill();
+                if now - race_data.delta_show_ts >= 5000 {
                     sector_data.s1.time_shown = false;
-                });
+                    sector_data.s1.is_done = true;
+                }
             }
 
             let sector_start_time = sector_data.s1.current_s_time;
@@ -607,6 +655,8 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
             // }
         } else if distence >= track_info.s2_end as f64 && distence < track_info.length as f64 {
             sector_data.s3.is_done = false;
+            sector_data.s1.time_shown = false;
+
 
             if !sector_data.s2.is_done {
                 sector_data.s2.is_done = true;
@@ -620,11 +670,20 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
                     "🪵 [sector.rs:507]~ token ~ \x1b[0;32msector_data.s1.delta\x1b[0m = s2/{}",
                     sector_data.s2.delta
                 );
-                tokio::spawn(async move {
-                    tokio::time::sleep(Duration::from_millis(5000)).await;
-                    let mut sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
+                race_data.delta_show_ts = get_now_ts_mill();
+
+                // tokio::spawn(async move {
+                //     tokio::time::sleep(Duration::from_millis(5000)).await;
+                //     let mut sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
+                //     sector_data.s2.time_shown = false;
+                // });
+            }
+            if sector_data.s2.time_shown {
+                let now = get_now_ts_mill();
+                if now - race_data.delta_show_ts >= 5000 {
                     sector_data.s2.time_shown = false;
-                });
+                    sector_data.s2.is_done = true;
+                }
             }
 
             let sector_start_time = sector_data.s2.current_s_time + sector_data.s1.current_s_time;

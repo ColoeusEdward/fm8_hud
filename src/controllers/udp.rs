@@ -13,7 +13,7 @@ use tokio::time::{sleep, Duration};
 use crate::{
     config::TELEMETRY_FIELDS,
     enums::ErrorData,
-    ui::index::{MyApp2, ERROR_TX, TELE_DATA_TX},
+    ui::index::{MyApp2, ERROR_TX, IS_UDP_REDIRECT, TELE_DATA_TX},
     uitl::{get_local_data_list, is_port_available, load_raw_bytes_from_file, read_fn_map, save_raw_bytes_to_file},
 };
 
@@ -82,6 +82,28 @@ pub fn init_udp(app: &mut MyApp2) -> Result<(), String> {
 
     println!("Listening on UDP: {}", socket_addr);
 
+    let socket_addr = format!("{}:{}", "127.0.0.1", "18003"); // Listen on all interfaces
+    let send_socket = match UdpSocket::bind(&socket_addr) {
+        Ok(s) => s,
+        Err(e) => {
+            println!("Failed to bind UDP socket: {}", e);
+            is_start.store(0, std::sync::atomic::Ordering::SeqCst);
+            thread_running_flag.store(false, Ordering::SeqCst);
+            let mut err = format!("Failed to bind UDP socket:  {}", e);
+            if e.kind() == io::ErrorKind::AddrInUse {
+                err = format!("Failed to bind UDP socket:  {}", "当前IP端口已被其他程序占用");
+            } else if err.contains("invalid port") {
+                err = format!("Failed to bind UDP socket:  {}", "端口格式错误");
+            } else if err.contains("不知道这样的") {
+                err = format!("Failed to bind UDP socket:  {}", "IP格式错误");
+            }
+            let _ = ERROR_TX.get().unwrap().lock().unwrap().send(ErrorData {
+                message: err.clone(),
+            });
+            return Err(err);
+        }
+    };
+
     let _ = tokio::spawn(async move {
         // let mut buffer = [0u8; 1024]; // Adjust buffer size as needed
         let mut buffer = [0u8; 1500]; // Typical MTU for Ethernet
@@ -117,11 +139,11 @@ pub fn init_udp(app: &mut MyApp2) -> Result<(), String> {
                     break;
                 } // Error setting timeout, exit thread
             }
+            
 
             match socket.recv_from(&mut buffer) {
                 Ok((bytes_received, _)) => {
                     save_temp_data(buffer).unwrap();
-
                     // // Emit event to the frontend
                     // let payload = serde_json::json!({
                     //     "sender": src.to_string(),
@@ -150,8 +172,8 @@ pub fn init_udp(app: &mut MyApp2) -> Result<(), String> {
                         data_map.insert(item.name.to_string(), val);
                     }
                     tele_tx.lock().unwrap().send(data_map.clone()).unwrap();
-                    
 
+                    redirct_data(&send_socket, buffer);
                     // todata.lock().unwrap().insert(vv[0], [vv[0], vv[2]].to_vec());
                     // println!(
                     //     "🪵 [udp.rs:118]~ token ~ \x1b[0;32mdata_vec\x1b[0m = {}",
@@ -426,7 +448,28 @@ fn build_chart_data(
     } // todata_guard 在这里离开作用域并释放锁
 }
 
-
+pub fn redirct_data(socket: &UdpSocket, buf: [u8; 1500]) {
+    // 克隆 socket，以便在另一个线程中发送数据。
+        // UdpSocket 是 Send 和 Sync 的，所以可以安全地在线程间共享或克隆。
+        let is_need_rediret = IS_UDP_REDIRECT.get().unwrap().lock().unwrap().load(Ordering::SeqCst);
+        if !is_need_rediret {
+            return;
+        }
+        // 预设一个外部目标地址和端口，用于主动发送数据
+        let external_target_addr = &format!("{}:{}", "127.0.0.1", "8003"); // 假设有一个客户端在 8081 端口监听
+        match socket.send_to(&buf, external_target_addr) {
+            Ok(bytes_sent) => {
+                // println!("sending");
+                // println!("Sent {} bytes proactively to {}: {}", bytes_sent, external_target_addr, message);
+            }
+            Err(e) => {
+                eprintln!(
+                    "Failed to send data proactively to {}: {}",
+                    external_target_addr, e
+                );
+            }
+        }
+}
 
 pub fn calc_max_area_rpm_zone(rpm_length: i32) {
     // println!("🪵 [udp.rs:517]~ token ~ \x1b[0;32mrpm_length\x1b[0m = {}", rpm_length);

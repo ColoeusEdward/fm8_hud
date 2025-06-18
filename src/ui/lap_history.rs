@@ -1,13 +1,13 @@
-use std::{collections::BTreeMap, sync::MutexGuard};
+use std::{collections::BTreeMap, sync::{atomic::Ordering, Mutex, MutexGuard}};
 
 use eframe::{
-    egui::{self, Area, Color32, Rect, RichText, UiBuilder, Vec2},
+    egui::{self, Area, Color32, Rect, RichText, Stroke, StrokeKind, UiBuilder, Vec2},
     epaint::CornerRadiusF32,
 };
 
 use crate::{
     enums::GameRaceData,
-    ui::index::{MyApp2, GAME_RACE_DATA, TEXTURE_HANDLE_MAP},
+    ui::index::{MyApp2, GAME_RACE_DATA, IS_MOUSE_PASS, TEXTURE_HANDLE_MAP},
     uitl::format_milliseconds_to_mmssms,
 };
 
@@ -17,6 +17,7 @@ pub fn render_history(ctx: &egui::Context, app: &mut MyApp2) {
     }
     let mut race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
     let texture_map = TEXTURE_HANDLE_MAP.get().unwrap().lock().unwrap();
+    let is_mouse_pass = IS_MOUSE_PASS.get().unwrap().lock().unwrap().load(Ordering::SeqCst);
 
     let res = Area::new("history".into())
         .current_pos(egui::pos2(app.history_pos.x, app.history_pos.y)) // 位置, 400.0 + app.yoffset)) // 位置
@@ -32,6 +33,15 @@ pub fn render_history(ctx: &egui::Context, app: &mut MyApp2) {
             let desired_size = egui::vec2(len, height);
             // 分配一个精确大小的区域，这将是我们绘制矩形的边界
             let (rect, _response) = ui.allocate_exact_size(desired_size, egui::Sense::hover());
+            if !is_mouse_pass {
+                let painter = ui.painter();
+                painter.rect_stroke(
+                    rect,
+                    CornerRadiusF32::same(6.0), // 所有角的圆角半径相同
+                    Stroke::new(3.0, Color32::WHITE),
+                    StrokeKind::Outside,
+                );
+            }
 
             render_lap_table(
                 ctx,
@@ -126,7 +136,7 @@ fn render_lap_table(
             // 获取 painter
             let painter = ui_at_rect.painter();
             // 定义填充颜色: #A2000000 (ARGB) -> 64% 透明度的黑色 (RGBA: 0,0,0,162)
-            let fill_color = Color32::from_rgba_premultiplied(128, 128, 128, 210);
+            let fill_color = Color32::from_rgba_premultiplied(215, 219, 225, 210);
             // 定义圆角半径
             let corner_radius = 3.0; // 较大的圆角，更明显
                                      // 绘制填充的圆角矩形

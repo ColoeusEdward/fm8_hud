@@ -79,7 +79,7 @@ impl Default for ShowState {
             show_setting: false,
             show_info: false,
             show_sector: true,
-            show_sight: true,
+            show_sight: false,
             show_complist: false,
             show_dash: true,
             show_history: true,
@@ -93,6 +93,7 @@ impl Default for ShowState {
 pub struct SettingData {
     pub ip: String,
     pub port: String,
+    pub is_redirect:bool,
     pub sector_len: String,
     pub sector_scale: f32,
     pub sector_base_len: f32,
@@ -117,6 +118,7 @@ impl Default for SettingData {
         Self {
             ip: "127.0.0.1".to_string(),
             port: "8000".to_string(),
+            is_redirect: false,
 
             sector_len: "210".to_string(),
             sector_scale: 5.25, //长宽比
@@ -344,6 +346,11 @@ pub struct GameRaceData {
     pub tire_slip4:f64,
     pub lap_history:Vec<f64>,
     pub lap_history_str:Vec<String>,
+    pub delta_show_ts:u128,
+    pub last_save_lap_tire_wear1:f64,
+    pub last_save_lap_tire_wear2:f64,
+    pub last_save_lap_tire_wear3:f64,
+    pub last_save_lap_tire_wear4:f64,
 }
 impl Default for GameRaceData {
     fn default() -> Self {
@@ -390,6 +397,11 @@ impl Default for GameRaceData {
             lap_start_tire_wear4:0.0,
             lap_history:Vec::new(),
             lap_history_str:Vec::new(),
+            delta_show_ts:0,
+            last_save_lap_tire_wear1:0.0,
+            last_save_lap_tire_wear2:0.0,
+            last_save_lap_tire_wear3:0.0,
+            last_save_lap_tire_wear4:0.0,
         }
     }
 }

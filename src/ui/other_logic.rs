@@ -21,9 +21,13 @@ use tokio::time::sleep;
 use crate::{
     controllers::udp::{init_udp, THREAD_RUNINNG_FLAG},
     enums::TeleData,
-    ui::{dash::load_img, index::{
-        ERROR_RX, ERROR_SHOW_FLAG, IS_FIRST, IS_MOUSE_PASS, KEYRECORD, LAST_IS_MOUSE_PASS, LAST_TELE_DATA, RESTART_UDP_FLAG, RXHOLDER, TELE_DATA_RX, TXHOLDER
-    }},
+    ui::{
+        dash::load_img,
+        index::{
+            ERROR_RX, ERROR_SHOW_FLAG, IS_FIRST, IS_MIN, IS_MOUSE_PASS, KEYRECORD,
+            LAST_IS_MOUSE_PASS, LAST_TELE_DATA, RESTART_UDP_FLAG, RXHOLDER, TELE_DATA_RX, TXHOLDER,
+        },
+    },
 };
 
 pub struct KeyData {
@@ -123,6 +127,13 @@ pub fn key_listener() {
                 handle.store(!val, Ordering::SeqCst);
             }
         }
+        if event.event_type == EventType::KeyPress(Key::F10) {
+            {
+                let is_min = IS_MIN.get().unwrap().lock().unwrap();
+                let val = is_min.load(Ordering::SeqCst);
+                is_min.store(!val, Ordering::SeqCst);
+            }
+        }
         if event.event_type == EventType::KeyPress(Key::ControlLeft) {
             let mut key_record = KEYRECORD
                 .get_or_init(|| Mutex::new(HashSet::new()))
@@ -172,6 +183,11 @@ pub fn key_listener_focus(ctx: &egui::Context, app: &mut crate::ui::index::MyApp
             };
             let is_mouse_pass = handle.load(Ordering::SeqCst);
             handle.store(!is_mouse_pass, Ordering::SeqCst);
+        }
+        if input.key_pressed(egui::Key::F10) {
+            let is_min = IS_MIN.get().unwrap().lock().unwrap();
+            let val = is_min.load(Ordering::SeqCst);
+            is_min.store(!val, Ordering::SeqCst);
         }
 
         if input
@@ -275,6 +291,12 @@ pub fn check_is_focus(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2) {
     //   }
 }
 
+pub fn check_is_min(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2) -> bool {
+    let is_min = IS_MIN.get().unwrap().lock().unwrap();
+    let val = is_min.load(Ordering::SeqCst);
+    return val;
+}
+
 fn check_ctrl_q(key_record: MutexGuard<'_, HashSet<rdev::Key>>) {
     let tx = TXHOLDER.get().unwrap().lock().unwrap();
     if key_record.contains(&Key::KeyC) && key_record.contains(&Key::ControlLeft) {
@@ -369,7 +391,6 @@ pub fn receive_upd_data() {
     tokio::spawn(async move {
         loop {
             let tele_rx = TELE_DATA_RX.get().unwrap().lock().unwrap();
-            
 
             let tele_data = match tele_rx.recv() {
                 Ok(data) => {
@@ -377,14 +398,10 @@ pub fn receive_upd_data() {
                     // println!("[Receiver] 收到 (非阻塞): {}", msg.close);
                     let old_map = mem::replace(&mut *last_tele_data, data);
                 }
-                Err(e)=>{
-
-                }
+                Err(e) => {}
             };
             // thread::sleep(Duration::from_millis(4));
             // tokio::time::sleep(tokio::time::Duration::from_millis(4)).await;
         }
     });
 }
-
-

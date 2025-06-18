@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     enums::CarSetting,
-    ui::index::{CAR_SETTING, CUR_CAR_RPM_SETTING, GAME_RACE_DATA, IS_MOUSE_PASS},
+    ui::index::{CAR_SETTING, CUR_CAR_RPM_SETTING, GAME_RACE_DATA, IS_MOUSE_PASS, IS_UDP_REDIRECT},
 };
 use eframe::egui::{self, Align, Area, FontId, Layout, Pos2, RichText, TextEdit};
 
@@ -67,6 +67,22 @@ pub fn render_setting(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2) {
                                             .font(egui::FontId::proportional(14.0)),
                                     );
                                     ui.add(TextEdit::singleline(&mut app.setting_data.port));
+                                });
+                                ui.horizontal(|ui| {
+                                    let res = ui.checkbox(
+                                        &mut app.setting_data.is_redirect,
+                                        RichText::new("开启UDP转发(固定转发至8003端口)")
+                                            .color(egui::Color32::WHITE)
+                                            .font(egui::FontId::monospace(14.0)),
+                                    );
+                                    if res.changed() {
+                                        IS_UDP_REDIRECT
+                                            .get()
+                                            .unwrap()
+                                            .lock()
+                                            .unwrap()
+                                            .store(app.setting_data.is_redirect, Ordering::SeqCst);
+                                    }
                                 });
 
                                 ui.separator();
@@ -131,7 +147,12 @@ pub fn render_info(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, ui: 
                 ui.separator();
 
                 ui.label(
-                    RichText::new(r"F2          切换编辑状态, 编辑状态可拖动组件")
+                    RichText::new(r"F2           切换编辑状态, 编辑状态可拖动组件")
+                        .color(egui::Color32::WHITE)
+                        .font(egui::FontId::monospace(14.0)),
+                );
+                ui.label(
+                    RichText::new(r"F10          整体隐藏或显示HUD")
                         .color(egui::Color32::WHITE)
                         .font(egui::FontId::monospace(14.0)),
                 );
@@ -390,9 +411,27 @@ pub fn render_other(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, ui:
                         }
                     });
 
-                    // ui.horizontal(|ui| {
-
-                    // });
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new("上一圈胎耗: ")
+                                .color(egui::Color32::WHITE)
+                                .font(FontId::monospace(14.0)), // .family(egui::FontFamily::Name("base".into()))
+                                                                // .size(14.0),
+                        );
+                        ui.add_space(10.0);
+                        ui.label(
+                            RichText::new(format!(
+                                " {:.1} / {:.1} / {:.1} / {:.1}",
+                                race_data.last_save_lap_tire_wear1,
+                                race_data.last_save_lap_tire_wear2,
+                                race_data.last_save_lap_tire_wear3,
+                                race_data.last_save_lap_tire_wear4
+                            ))
+                            .color(egui::Color32::WHITE)
+                            .font(FontId::monospace(14.0)), // .family(egui::FontFamily::Name("base".into()))
+                                                            // .size(14.0),
+                        );
+                    });
 
                     ui.separator();
 

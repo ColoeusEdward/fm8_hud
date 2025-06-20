@@ -449,7 +449,6 @@ fn build_chart_data(
 }
 
 pub fn redirct_data(socket: &UdpSocket, buf: [u8; 1500]) {
-    // 克隆 socket，以便在另一个线程中发送数据。
         // UdpSocket 是 Send 和 Sync 的，所以可以安全地在线程间共享或克隆。
         let is_need_rediret = IS_UDP_REDIRECT.get().unwrap().lock().unwrap().load(Ordering::SeqCst);
         if !is_need_rediret {

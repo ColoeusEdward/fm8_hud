@@ -293,7 +293,12 @@ fn render_arc(
         // let mut dash_color = Color32::from_rgba_premultiplied(0, 255, 255, 250);
         let dash_color_blink = Color32::from_rgba_premultiplied(0, 255, 255, 255);
         let color_per = if percent > 0.45 {
-            percent - 0.45 / percent * 0.45
+            let val = (percent - 0.45) / (1.0-0.45);
+            if val > 1.0 {
+                1.0
+            } else{
+                val
+            }
         } else {
             0.0
         };
@@ -302,9 +307,9 @@ fn render_arc(
         let g1: f32 = 0.0;
         let b1: f32 = 0.0;
 
-        let r2: f32 = 250.0;
-        let g2: f32 = 170.0;
-        let b2: f32 = 250.0;
+        let r2: f32 = 253.0;
+        let g2: f32 = 153.0;
+        let b2: f32 = 255.0;
         // 使用线性插值计算新的 R, G, B 值
         let new_r = r1 + (r2 - r1) * color_per as f32;
         let new_g = g1 + (g2 - g1) * color_per as f32;

@@ -292,8 +292,8 @@ fn render_arc(
 
         // let mut dash_color = Color32::from_rgba_premultiplied(0, 255, 255, 250);
         let dash_color_blink = Color32::from_rgba_premultiplied(0, 255, 255, 255);
-        let color_per = if percent > 0.45 {
-            let val = (percent - 0.45) / (1.0-0.45);
+        let color_per = if percent > 0.40 {
+            let val = (percent - 0.40) / (1.0-0.40-0.1);
             if val > 1.0 {
                 1.0
             } else{

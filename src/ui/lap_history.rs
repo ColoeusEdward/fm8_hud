@@ -73,7 +73,7 @@ fn render_lap_table(
     scale_to_base: f32,
     desired_size: egui::Vec2,
 ) {
-    let height = 32.0 * scale_to_base;
+    let height = 30.0 * scale_to_base;
     let left_width = 42.0 * scale_to_base;
     let cur_time_str = format_milliseconds_to_mmssms((race_data.current_time * 1000.0) as u32);
     let hisoty_str_list = &race_data.lap_history_str;
@@ -100,6 +100,8 @@ fn render_lap_table(
             let img_id =
                 if race_data.current_lap + 1 > 3 && i != 0 && hisoty_list[i - 1] == race_data.best_lap_time {
                     "history_best_img"
+                } else if race_data.current_lap + 1 > 3 && i != 0 && hisoty_list[i - 1] <= race_data.best_lap_time * 1.00125 {
+                    "history_good_img"
                 } else {
                     "history_img"
                 };
@@ -114,9 +116,11 @@ fn render_lap_table(
         let text_rect_a = Rect::from_min_size(text_pos, text_size);
         ui.allocate_new_ui(UiBuilder::new().max_rect(text_rect_a), |ui_at_rect| {
             ui_at_rect.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
+                let idx = if i > 0 { i } else { (race_data.current_lap + 1) as usize };
+                let p_str = if race_data.out_pit_lap_list.contains(&idx) {"P"} else {""} ;
                 // ui.add_space(12.0);
                 ui.label(
-                    RichText::new(format!("  {}", time_s))
+                    RichText::new(format!("  {}   {}", time_s,p_str))
                         .color(Color32::WHITE)
                         .family(egui::FontFamily::Name("base".into()))
                         .size(18.0 * scale_to_base),
@@ -148,7 +152,7 @@ fn render_lap_table(
         });
 
         let x_diff = if lap_str.len() >= 2 { -6.0 } else { 0.0 };
-        let text_pos = rect.left_top() + Vec2::new((16.0 + x_diff) * scale_to_base, 0.0 + y_pos); // 距离左上角 10 像素
+        let text_pos = rect.left_top() + Vec2::new((16.0 + x_diff) * scale_to_base, 0.0 + y_pos - 1.0); // 距离左上角 10 像素
         let text_rect_a = Rect::from_min_size(text_pos, text_size);
         ui.allocate_new_ui(UiBuilder::new().max_rect(text_rect_a), |ui_at_rect| {
             ui_at_rect.add_space(11.0 * scale_to_base);

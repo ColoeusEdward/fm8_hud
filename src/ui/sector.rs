@@ -21,7 +21,6 @@ use crate::{
 };
 
 pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
-
     let tele_data = LAST_TELE_DATA.get().unwrap().lock().unwrap();
     let cur_lap_time = tele_data.get("CurrentLap");
     let cur_lap_time = match cur_lap_time {
@@ -78,7 +77,7 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
             let painter = ui.painter();
 
             // 定义填充颜色: #A2000000 (ARGB) -> 64% 透明度的黑色 (RGBA: 0,0,0,162)
-            let fill_color = Color32::from_rgba_premultiplied(0, 0, 0, 128);
+            let fill_color = Color32::from_rgba_premultiplied(0, 0, 0, 100);
 
             // 定义圆角半径
             let corner_radius = 6.0; // 较大的圆角，更明显
@@ -140,9 +139,10 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
 
                 // 定义填充颜色: #A2000000 (ARGB) -> 64% 透明度的黑色 (RGBA: 0,0,0,162)
                 let fill_color = if delta.contains("+") {
-                    Color32::from_rgba_premultiplied(168, 14, 40, 255)
+                    Color32::from_rgba_premultiplied(201, 0, 3, 255)
                 } else {
-                    Color32::from_rgba_premultiplied(44, 153, 50, 255)
+                    Color32::from_rgba_premultiplied(40, 184, 6, 255)
+                    // Color32::from_rgba_premultiplied(44, 153, 50, 255)
                 };
                 // let fill_color = Color32::from_rgba_premultiplied(177, 45, 44 ,128);
 
@@ -169,7 +169,7 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
                                     .family(egui::FontFamily::Name("base".into()))
                                     .color(Color32::WHITE)
                                     .weak()
-                                    .size(24.0 * scale_to_base),
+                                    .size(21.0 * scale_to_base),
                             );
 
                             ui.add_space(5.0 * scale_to_base); // 文本和按钮之间的空间
@@ -389,7 +389,7 @@ pub fn render_bg(
         )
     });
 }
-pub fn reset_race_data(race_data:&mut MutexGuard<'_, GameRaceData>) {
+pub fn reset_race_data(race_data: &mut MutexGuard<'_, GameRaceData>) {
     // race_data.current_time = 0.0;
     race_data.last_lap_tire_wear1 = 0.0;
     race_data.last_lap_tire_wear2 = 0.0;
@@ -402,10 +402,17 @@ pub fn reset_race_data(race_data:&mut MutexGuard<'_, GameRaceData>) {
     race_data.lap_start_tire_wear4 = race_data.tire_wear4;
 
     race_data.sub_current_lap = 0;
+    race_data.out_pit_lap_list.clear();
 }
-pub fn reset_lap_history(race_data:&mut MutexGuard<'_, GameRaceData>) {
+pub fn reset_lap_history(race_data: &mut MutexGuard<'_, GameRaceData>) {
     if race_data.current_lap + 1 <= race_data.lap_history.len() as i32 {
-        println!("🪵 [sector.rs:406]~ token ~ \x1b[0;32mrace_data.current_lap + 1\x1b[0m = {} {}", race_data.current_lap + 1,race_data.lap_history.len());
+        // println!(
+        //     "🪵 [sector.rs:406]~ token ~ \x1b[0;32mrace_data.current_lap + 1\x1b[0m = {} {} {} {} ",
+        //     race_data.current_lap + 1,
+        //     race_data.lap_history.len(),
+        //     race_data.race_time,
+        //     race_data.is_race_on
+        // );
         race_data.lap_history.clear();
         race_data.lap_history_str.clear();
     }
@@ -420,6 +427,42 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
     let track_info = get_track_data_map(&race_data.track_id);
     // println!("🪵 [sector.rs:398]~ token ~ \x1b[0;32m&race_data.track_id\x1b[0m = {}", &race_data.track_id);
     let cur_sector_time = race_data.race_time - race_data.current_time;
+    if race_data.is_race_on < 1 && race_data.current_time == 0.0 {
+        if race_data.race_stop_ts == 0 {
+            race_data.race_stop_ts = get_now_ts_mill();
+        }
+        // println!(
+        //     "🪵 [sector.rs:490]~ token ~ \x1b[0;32mrace_data.is_race_on\x1b[0m = {} {} {} {} {} {} {}",
+        //     race_data.current_time, race_data.current_lap, race_data.distance, race_data.track_id, race_data.race_time,race_data.rpm,race_data.speed,
+        // ); 
+        if race_data.race_time == 0.0 {
+            sector_data.s3.current_s_time = 0.0;
+        }
+        return (
+            format_milliseconds_to_mmssms((race_data.current_time * 1000.0) as u32),
+            false,
+            "0.00".to_string(),
+        );
+    }else{
+        if race_data.race_stop_ts > 0 {
+            if race_data.track_id == sector_data.s1.last_track_id && race_data.distance > 0.0 {
+                let time_pass = get_now_ts_mill() - race_data.race_stop_ts;
+                println!("🪵 [sector.rs:447]~ token ~ \x1b[0;32mtime_pass\x1b[0m = {}", time_pass);
+                if time_pass > 8000 && !sector_data.s3.is_done {
+                    sector_data.s3.is_done = true;
+                    race_data.pit_diff_time = time_pass as f64 / 2.0 / 1000.0; //下一圈承担一半p房耗时
+                    let cur_lap = race_data.current_lap+1;
+                    race_data.out_pit_lap_list.push(cur_lap as usize);
+                }
+            }
+            // if get_now_ts_mill() - race_data.race_stop_ts > 1000 {
+            //     race_data.is_race_on = 1;
+            //     race_data.race_stop_ts = 0;
+            // }
+            race_data.race_stop_ts = 0;
+        }
+    }
+
     if race_data.race_time <= 0.3 {
         // println!(
         //     "🪵 [sector.rs:401]~ token ~ \x1b[0;32mrace_data.race_time <= 0.3 \x1b[0m = {}",
@@ -483,36 +526,43 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
     }
     //-------------------------------------------------
 
+    
+
     if race_data.current_time > 0.0 {
-        
-        if race_data.lap > - 1 {
+        // println!("🪵 [sector.rs:408]~ token ~ \x1b[0;32mrace_data.is_race_on\x1b[0m = {}", race_data.is_race_on);
+
+        if race_data.lap > -1 { //第二圈开始
             let last_time = race_data.last_lap_time;
             reset_lap_history(&mut race_data);
             if race_data.lap_history.len() < race_data.current_lap as usize {
                 race_data.lap_history.push(last_time);
-                race_data.lap_history_str.push(format_milliseconds_to_mmssms((last_time * 1000.0) as u32));
+                race_data
+                    .lap_history_str
+                    .push(format_milliseconds_to_mmssms((last_time * 1000.0) as u32));
             }
         }
 
-        
-        
         // println!("🪵 [sector.rs:494]~ token ~ \x1b[0;32mrace_data.current_lap > race_data.sub_current_lap\x1b[0m = {} {}", race_data.current_lap , race_data.sub_current_lap);
 
         if race_data.current_lap > race_data.sub_current_lap && race_data.distance > 0.0 {
-        println!("🪵 [sector.rs:494]~ token ~ \x1b[0;32mrace_data.current_lap > race_data.sub_current_lap\x1b[0m = {} {}", race_data.current_lap , race_data.sub_current_lap);
+            println!("🪵 [sector.rs:494]~ token ~ \x1b[0;32mrace_data.current_lap > race_data.sub_current_lap\x1b[0m = {} {}", race_data.current_lap , race_data.sub_current_lap, );
             race_data.sub_current_lap = race_data.current_lap;
             race_data.sub_distance = race_data.distance;
 
             // println!("🪵 [sector.rs:522]~ token ~ \x1b[0;32mdistence\x1b[0m = {}", distence);
-            race_data.last_lap_tire_wear1 = (race_data.tire_wear1 - race_data.lap_start_tire_wear1) * 100.0;
-            race_data.last_lap_tire_wear2 = (race_data.tire_wear2 - race_data.lap_start_tire_wear2) * 100.0;
-            race_data.last_lap_tire_wear3 = (race_data.tire_wear3 - race_data.lap_start_tire_wear3) * 100.0;
-            race_data.last_lap_tire_wear4 = (race_data.tire_wear4 - race_data.lap_start_tire_wear4) * 100.0;
+            race_data.last_lap_tire_wear1 =
+                (race_data.tire_wear1 - race_data.lap_start_tire_wear1) * 100.0;
+            race_data.last_lap_tire_wear2 =
+                (race_data.tire_wear2 - race_data.lap_start_tire_wear2) * 100.0;
+            race_data.last_lap_tire_wear3 =
+                (race_data.tire_wear3 - race_data.lap_start_tire_wear3) * 100.0;
+            race_data.last_lap_tire_wear4 =
+                (race_data.tire_wear4 - race_data.lap_start_tire_wear4) * 100.0;
 
-            race_data.lap_start_tire_wear1 =race_data.tire_wear1;
-            race_data.lap_start_tire_wear2 =race_data.tire_wear2;
-            race_data.lap_start_tire_wear3 =race_data.tire_wear3;
-            race_data.lap_start_tire_wear4 =race_data.tire_wear4;
+            race_data.lap_start_tire_wear1 = race_data.tire_wear1;
+            race_data.lap_start_tire_wear2 = race_data.tire_wear2;
+            race_data.lap_start_tire_wear3 = race_data.tire_wear3;
+            race_data.lap_start_tire_wear4 = race_data.tire_wear4;
 
             if race_data.last_lap_tire_wear1 > 1.0 {
                 race_data.last_save_lap_tire_wear1 = race_data.last_lap_tire_wear1;
@@ -521,25 +571,26 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
                 race_data.last_save_lap_tire_wear4 = race_data.last_lap_tire_wear4;
             }
 
-        //     // if race_data.tire_wear1 < race_data.lap_start_tire_wear1 {
-                
-        //     // }
+            //     // if race_data.tire_wear1 < race_data.lap_start_tire_wear1 {
 
-        //     // println!("🪵 [sector.rs:458]~ token ~ \x1b[0;32mrace_data.distance;\x1b[0m = {}", race_data.distance);
+            //     // }
+
+            //     // println!("🪵 [sector.rs:458]~ token ~ \x1b[0;32mrace_data.distance;\x1b[0m = {}", race_data.distance);
         }
         if race_data.distance < race_data.sub_distance {
             race_data.sub_distance = 0.0;
         }
         let mut distence = race_data.distance - race_data.sub_distance;
-        
-        if distence > track_info.length as f64 {  //兜底检测
+
+        if distence > track_info.length as f64 {
+            //兜底检测
             race_data.sub_distance = race_data.distance;
             distence = 0.0;
         }
-        
+
         // println!("🪵 [sector.rs:521]~ token ~ \x1b[0;32mdistence\x1b[0m = {}", distence);
         // if distence >= 0.0  && distence < 2.0 {
-           
+
         // }
 
         // if (race_data.current_time as i32 % 5) == 0 {
@@ -562,24 +613,30 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
             sector_data.s2.is_done = false;
             sector_data.s2.time_shown = false;
 
-
-            if distence >= 0.0  && distence < 2.0 {
-            println!(
-                "🪵 [sector.rs:477]~ token ~ \x1b[0;32mace_data.lap \x1b[0m = {} {} {} {} ",
-                !sector_data.s3.is_done,
-                 sector_data.s3.current_s_time, race_data.distance - distence, track_info.length
-            );
+            if distence >= 0.0 && distence < 2.0 {
+                println!(
+                    "🪵 [sector.rs:477]~ token ~ \x1b[0;32mace_data.lap \x1b[0m = {} {} {} {} ",
+                    !sector_data.s3.is_done,
+                    sector_data.s3.current_s_time,
+                    race_data.distance - distence,
+                    track_info.length
+                );
             }
-            
-            if !sector_data.s3.is_done && race_data.distance - distence >= track_info.length as f64 && sector_data.s3.current_s_time > 0.0 {
-                
 
+            if !sector_data.s3.is_done
+                && race_data.distance - distence >= track_info.length as f64
+                && sector_data.s3.current_s_time > 0.0
+            {
+                
                 // println!("🪵 [sector.rs:477]~ token ~ \x1b[0;32mace_data.lap \x1b[0m = {}", race_data.lap );
                 sector_data.s3.is_done = true;
                 sector_data.s3.delta = sector_data.s3.current_s_time - sector_data.s3.best_time;
-                if sector_data.s3.current_s_time < sector_data.s3.best_time {
+                if sector_data.s3.current_s_time < sector_data.s3.best_time && race_data.pit_diff_time == 0.0 {
                     sector_data.s3.sub_best_time = sector_data.s3.best_time;
                     sector_data.s3.best_time = sector_data.s3.current_s_time;
+                }
+                if race_data.pit_diff_time > 0.0 {
+                    race_data.pit_diff_time = 0.0;
                 }
                 sector_data.s3.time_shown = true;
                 println!(
@@ -601,8 +658,9 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
                     sector_data.s3.is_done = true;
                 }
             }
-
-            sector_data.s1.current_s_time = race_data.current_time;
+            // let diff_time = if race_data.pit_diff_time > 0.0 {race_data.pit_diff_time } else {0.0};
+            let diff_time = 0.0;
+            sector_data.s1.current_s_time = race_data.current_time + diff_time;
             // if (race_data.current_time as i32 % 5) == 0 {
             //     println!(
             //                 "🪵 [sector.rs:460]~ token ~ \x1b[0;32mdistence\x1b[0m = 1/{} {} {} {} ",
@@ -620,7 +678,7 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
             if !sector_data.s1.is_done {
                 sector_data.s1.is_done = true;
                 sector_data.s1.delta = sector_data.s1.current_s_time - sector_data.s1.best_time;
-                if sector_data.s1.current_s_time < sector_data.s1.best_time {
+                if sector_data.s1.current_s_time < sector_data.s1.best_time  && race_data.pit_diff_time == 0.0  {
                     sector_data.s1.sub_best_time = sector_data.s1.best_time;
                     sector_data.s1.best_time = sector_data.s1.current_s_time;
                 }
@@ -629,6 +687,7 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
                     "🪵 [sector.rs:507]~ token ~ \x1b[0;32msector_data.s1.delta\x1b[0m = s1/{}",
                     sector_data.s1.delta
                 );
+                
                 race_data.delta_show_ts = get_now_ts_mill();
                 // tokio::spawn(async move {
                 //     tokio::time::sleep(Duration::from_millis(5000)).await;
@@ -644,8 +703,10 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
                 }
             }
 
+            // let diff_time = if race_data.pit_diff_time > 0.0 {race_data.pit_diff_time } else {0.0};
+            let diff_time = 0.0;
             let sector_start_time = sector_data.s1.current_s_time;
-            sector_data.s2.current_s_time = race_data.current_time - sector_start_time;
+            sector_data.s2.current_s_time = race_data.current_time - sector_start_time + diff_time;
 
             // if (race_data.current_time as i32 % 5) == 0 {
             //     println!(
@@ -657,11 +718,12 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
             sector_data.s3.is_done = false;
             sector_data.s1.time_shown = false;
 
-
             if !sector_data.s2.is_done {
                 sector_data.s2.is_done = true;
                 sector_data.s2.delta = sector_data.s2.current_s_time - sector_data.s2.best_time;
-                if sector_data.s2.current_s_time < sector_data.s2.best_time {
+                if sector_data.s2.current_s_time < sector_data.s2.best_time  && race_data.pit_diff_time == 0.0 {
+                    // println!("🪵 [sector.rs:629]~ token ~ \x1b[0;32mrace_data.pit_diff_time == 0.0\x1b[0m = {}", race_data.pit_diff_time == 0.0);
+
                     sector_data.s2.sub_best_time = sector_data.s2.best_time;
                     sector_data.s2.best_time = sector_data.s2.current_s_time;
                 }
@@ -686,11 +748,13 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
                 }
             }
 
+            // let diff_time: f64 = if race_data.pit_diff_time > 0.0 { race_data.pit_diff_time } else {0.0};
+            let diff_time = 0.0;
             let sector_start_time = sector_data.s2.current_s_time + sector_data.s1.current_s_time;
             // println!("🪵 [sector.rs:539]~ token ~ \x1b[0;32msector_start_time\x1b[0m = {} {}",race_data.current_time, sector_start_time);
             // if race_data.current_time > 10.0 { //确保没有用到下一圈的current time
             // }
-            sector_data.s3.current_s_time = race_data.current_time - sector_start_time;
+            sector_data.s3.current_s_time = race_data.current_time - sector_start_time + diff_time;
             // if (race_data.current_time as i32 % 5) == 0 {
             //     println!(
             //         "🪵 [sector.rs:460]~ token ~ \x1b[0;32mdistence\x1b[0m = 3/{} ",
@@ -763,14 +827,14 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
         sector_data.s1.time_shown || sector_data.s2.time_shown || sector_data.s3.time_shown;
 
     let mut delta = if sector_data.s1.time_shown {
-        let str = if sector_data.s1.delta > 0.0 { "+" } else { "" };
-        format!("{}{:.2}", str, sector_data.s1.delta)
+        let str = if sector_data.s1.delta > 0.0 { "+ " } else { "- " };
+        format!("{}{:.3}", str, sector_data.s1.delta.abs())
     } else if sector_data.s2.time_shown {
-        let str = if sector_data.s2.delta > 0.0 { "+" } else { "" };
-        format!("{}{:.2}", str, sector_data.s2.delta)
+        let str = if sector_data.s2.delta > 0.0 { "+ " } else { "- " };
+        format!("{}{:.3}", str, sector_data.s2.delta.abs())
     } else if sector_data.s3.time_shown {
-        let str = if sector_data.s3.delta > 0.0 { "+" } else { "" };
-        format!("{}{:.2}", str, sector_data.s3.delta)
+        let str = if sector_data.s3.delta > 0.0 { "+ " } else { "- " };
+        format!("{}{:.3}", str, sector_data.s3.delta.abs())
     } else {
         "-:--".to_string()
     };
@@ -785,6 +849,10 @@ pub fn update_race_data(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> () {
     let mut game_race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
     // let mut new_data = GameRaceData::default();
     game_race_data.current_lap = match tele_data.get("LapNumber") {
+        Some(lap) => lap.clone() as i32,
+        None => 0,
+    };
+    game_race_data.is_race_on = match tele_data.get("IsRaceOn") {
         Some(lap) => lap.clone() as i32,
         None => 0,
     };
@@ -815,9 +883,7 @@ pub fn update_race_data(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> () {
         None => 0.0,
     };
     game_race_data.speed = match tele_data.get("Speed") {
-        Some(speed) => {
-            (speed * 3.6) as f64 
-        },
+        Some(speed) => (speed * 3.6) as f64,
         None => 0.0,
     };
     game_race_data.gear = match tele_data.get("Gear") {

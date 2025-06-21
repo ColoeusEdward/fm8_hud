@@ -305,6 +305,7 @@ impl Default for LapControl {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GameRaceData {
     pub lap: i32,
+    pub is_race_on: i32,
     pub current_lap: i32,
     pub sub_current_lap: i32,
     pub distance: f64,
@@ -351,10 +352,16 @@ pub struct GameRaceData {
     pub last_save_lap_tire_wear2:f64,
     pub last_save_lap_tire_wear3:f64,
     pub last_save_lap_tire_wear4:f64,
+    pub race_stop_ts:u128,
+    pub pit_diff_time:f64,
+    pub last_car_id:i32,
+    pub out_pit_lap_list:Vec<usize>,
+    pub good_lap_list:Vec<usize>,
 }
 impl Default for GameRaceData {
     fn default() -> Self {
         Self {
+            is_race_on: 0,
             lap: 0,
             current_lap: 0,
             distance: 0.0,
@@ -402,6 +409,11 @@ impl Default for GameRaceData {
             last_save_lap_tire_wear2:0.0,
             last_save_lap_tire_wear3:0.0,
             last_save_lap_tire_wear4:0.0,
+            race_stop_ts:0,
+            pit_diff_time:0.0,
+            last_car_id:0,
+            out_pit_lap_list:Vec::new(),
+            good_lap_list:Vec::new(),
         }
     }
 }

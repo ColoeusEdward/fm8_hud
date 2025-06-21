@@ -807,6 +807,7 @@ pub fn load_img(ctx: &egui::Context, app: &mut MyApp2) {
     let image_data4 = include_bytes!("../../resource/gap_gradient.png"); // 确保路径正确
     let image_data5 = include_bytes!("../../resource/fl_gradient.png"); // 确保路径正确
     let image_data6 = include_bytes!("../../resource/fuel_inner.png"); // 确保路径正确
+    let image_data7 = include_bytes!("../../resource/gap_gradient_good.png"); // 确保路径正确
     let mut texture_list = TEXTURE_HANDLE_MAP.get().unwrap().lock().unwrap();
 
     let mut load_fn = |imgd: &[u8], id: &str| {
@@ -841,4 +842,5 @@ pub fn load_img(ctx: &egui::Context, app: &mut MyApp2) {
     load_fn(image_data4, "history_img");
     load_fn(image_data5, "history_best_img");
     load_fn(image_data6, "fuel_icon");
+    load_fn(image_data7, "history_good_img");
 }

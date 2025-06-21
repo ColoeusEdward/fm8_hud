@@ -298,12 +298,18 @@ pub fn render_other(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, ui:
     if btn.clicked() {
         app.show_state.show_other = !app.show_state.show_other;
     }
-    let race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
+    let mut race_data = GAME_RACE_DATA.get().unwrap().lock().unwrap();
     let mut cur_car_rpm_setting = CUR_CAR_RPM_SETTING.get().unwrap().lock().unwrap();
     let mut car_setting = CAR_SETTING.get().unwrap().lock().unwrap();
-    let id = race_data.car_id.clone() as u16;
+    let id = if race_data.car_id == 0 {
+        race_data.last_car_id
+    } else {
+        race_data.car_id
+    } as u16;
     if id == 0 {
         return;
+    } else {
+        race_data.last_car_id = id as i32;
     }
     if car_setting.rpm.get(&id).is_none() {
         let mut vec = Vec::<String>::new();
@@ -313,8 +319,8 @@ pub fn render_other(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, ui:
         vec.push(red_rpm.to_string());
         car_setting.rpm.insert(id, vec);
     }
-    let car_rpm_item: &Vec<String> = car_setting.rpm.get(&id).unwrap();
     if cur_car_rpm_setting.car_id == 0 || cur_car_rpm_setting.car_id != id {
+        let car_rpm_item: &Vec<String> = car_setting.rpm.get(&id).unwrap();
         cur_car_rpm_setting.car_id = id;
         cur_car_rpm_setting.max_rpm = car_rpm_item[0].clone();
         cur_car_rpm_setting.red_rpm = car_rpm_item[1].clone();
@@ -370,7 +376,7 @@ pub fn render_other(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, ui:
                         );
 
                         ui.label(
-                            RichText::new(race_data.car_id.to_string())
+                            RichText::new(id.to_string())
                                 .color(egui::Color32::WHITE)
                                 .font(FontId::monospace(14.0)),
                         );

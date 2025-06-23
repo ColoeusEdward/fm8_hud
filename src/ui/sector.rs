@@ -650,10 +650,13 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
                     sector_data.s3.sub_best_time = sector_data.s3.best_time;
                     sector_data.s3.best_time = sector_data.s3.current_s_time;
                 }
+                if race_data.pit_diff_time == 0.0 {  //忽略出站圈计时
+                    sector_data.s3.time_shown = true;
+                }
                 if race_data.pit_diff_time > 0.0 {
                     race_data.pit_diff_time = 0.0;
                 }
-                sector_data.s3.time_shown = true;
+                
                 println!(
                     "🪵 [sector.rs:507]~ token ~ \x1b[0;32msector_data.s1.delta\x1b[0m = s3/{}",
                     sector_data.s3.delta

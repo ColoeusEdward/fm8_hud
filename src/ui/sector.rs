@@ -450,12 +450,10 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
             "0.00".to_string(),
         );
     }else{
-        if race_data.last_is_race_on < 1 {
-            let is_min = IS_MIN.get().unwrap().lock().unwrap();
+        let is_min = IS_MIN.get().unwrap().lock().unwrap();
             if is_min.load(Ordering::SeqCst) {
                 is_min.store(false, Ordering::SeqCst);
             }
-        }
         
         if race_data.race_stop_ts > 0 {
             if race_data.track_id == sector_data.s1.last_track_id && race_data.distance > 0.0 {

@@ -140,7 +140,7 @@ pub fn render_dash(ctx: &egui::Context, app: &mut MyApp2) {
             });
 
             let brake = (race_data.brake / 3.03) as f32;
-            let yoffset = 37.0 + 84.0 - brake;
+            let yoffset = 38.0 + 84.0 - brake;
             let text_pos = rect.left_top() + Vec2::new(387.0, yoffset); // 距离左上角 10 像素
                                                                         // let text_po2 = rect.left_top() + Vec2::new(776.0, 28.0); // 距离左上角 10 像素
             let text_size = Vec2::new(20.0, 100.0); // 文本区域宽度比背景小 20，高度 50
@@ -168,7 +168,7 @@ pub fn render_dash(ctx: &egui::Context, app: &mut MyApp2) {
             });
 
             let acc = (race_data.accel / 3.03) as f32;
-            let yoffset = 37.0 + 84.0 - acc;
+            let yoffset = 38.0 + 84.0 - acc;
             let text_pos = rect.left_top() + Vec2::new(911.0, yoffset); // 距离左上角 10 像素
                                                                         // let text_po2 = rect.left_top() + Vec2::new(776.0, 28.0); // 距离左上角 10 像素
             let text_size = Vec2::new(20.0, 100.0); // 文本区域宽度比背景小 20，高度 50
@@ -665,14 +665,15 @@ fn render_boost(
     let text_size = Vec2::new(136.8, 148.8); // 文本区域宽度比背景小 20，高度 50
     let text_rect_a = Rect::from_min_size(text_pos, text_size);
     let mut boost = race_data.boost;
-    if boost > 100.0 {
-        boost = 100.0;
-    }
-    boost = boost / 100.0;
     // println!(
     //     "🪵 [dash.rs:546]~ token ~ \x1b[0;32mboost\x1b[0m = {}",
     //     boost
     // );
+    // if boost > 100.0 {
+    //     boost = 100.0;
+    // }
+    boost = boost / 100.0;
+   
 
     ui.allocate_new_ui(UiBuilder::new().max_rect(text_rect_a), |ui_at_rect| {
         ui_at_rect.painter().image(
@@ -688,7 +689,7 @@ fn render_boost(
             let mut end_degree = 270.0 - half_total_len;
             // println!("🪵 [dash.rs:355]~ token ~ \x1b[0;32mrace_data.fuel\x1b[0m = {}", race_data.fuel);
             // end_degree = end_degree + total_len * 1.0;
-            end_degree = end_degree + total_len * boost;
+            end_degree = end_degree + total_len * boost * 2.5;
             // 定义圆弧的中心位置
             // 我们将其放置在标签旁边以便观察
             // ui_at_rect.label(RichText::new("FUEL").color(Color32::WHITE));

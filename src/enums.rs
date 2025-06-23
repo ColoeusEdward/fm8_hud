@@ -357,6 +357,7 @@ pub struct GameRaceData {
     pub last_car_id:i32,
     pub out_pit_lap_list:Vec<usize>,
     pub good_lap_list:Vec<usize>,
+    pub last_is_race_on:i32,
 }
 impl Default for GameRaceData {
     fn default() -> Self {
@@ -414,6 +415,7 @@ impl Default for GameRaceData {
             last_car_id:0,
             out_pit_lap_list:Vec::new(),
             good_lap_list:Vec::new(),
+            last_is_race_on:0
         }
     }
 }

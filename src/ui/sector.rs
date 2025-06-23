@@ -8,14 +8,14 @@ use std::{
 
 use eframe::{
     egui::{self, Area, Color32, Layout, UiBuilder, ViewportCommand},
-    epaint::CornerRadiusF32,
+    epaint::CornerRadiusF32
 };
 
 use crate::{
     config::{get_track_data_map, TrackData},
     enums::{GameRaceData, LapControl, SectorRecord},
     ui::index::{
-        MyApp2, GAME_RACE_DATA, IS_MOUSE_PASS, LAST_TELE_DATA, SECTORID, SECTOR_RECORD_DATA,
+        MyApp2, GAME_RACE_DATA, IS_MIN, IS_MOUSE_PASS, LAST_TELE_DATA, SECTORID, SECTOR_RECORD_DATA
     },
     uitl::{format_milliseconds_to_mmssms, get_now_ts, get_now_ts_mill},
 };
@@ -438,12 +438,25 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
         if race_data.race_time == 0.0 {
             sector_data.s3.current_s_time = 0.0;
         }
+
+        if race_data.lap_history.len() >= 5 {
+            let is_min = IS_MIN.get().unwrap().lock().unwrap();
+            is_min.store(true, Ordering::SeqCst);
+        }
+
         return (
             format_milliseconds_to_mmssms((race_data.current_time * 1000.0) as u32),
             false,
             "0.00".to_string(),
         );
     }else{
+        if race_data.last_is_race_on < 1 {
+            let is_min = IS_MIN.get().unwrap().lock().unwrap();
+            if is_min.load(Ordering::SeqCst) {
+                is_min.store(false, Ordering::SeqCst);
+            }
+        }
+        
         if race_data.race_stop_ts > 0 {
             if race_data.track_id == sector_data.s1.last_track_id && race_data.distance > 0.0 {
                 let time_pass = get_now_ts_mill() - race_data.race_stop_ts;
@@ -462,6 +475,8 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
             race_data.race_stop_ts = 0;
         }
     }
+
+    race_data.last_is_race_on = race_data.is_race_on;
 
     if race_data.race_time <= 0.3 {
         // println!(

@@ -443,7 +443,7 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
             let is_min = IS_MIN.get().unwrap().lock().unwrap();
             is_min.store(true, Ordering::SeqCst);
         }
-
+        race_data.last_is_race_on = race_data.is_race_on;
         return (
             format_milliseconds_to_mmssms((race_data.current_time * 1000.0) as u32),
             false,

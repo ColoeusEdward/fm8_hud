@@ -438,7 +438,7 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
             sector_data.s3.current_s_time = 0.0;
         }
 
-        if race_data.lap_history.len() >= 5 {
+        if race_data.lap_history.len() >= 3 {
             let is_min = IS_MIN.get().unwrap().lock().unwrap();
             is_min.store(true, Ordering::SeqCst);
         }

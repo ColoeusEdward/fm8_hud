@@ -48,7 +48,7 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
     //     // println!("🪵 [sector.rs:48]~ token ~ \x1b[0;32mcur_lap_time\x1b[0m = {} {} {}", cur_lap_time,ts,test_lap);
     //     return;
     // }
-    if !app.show_state.show_sector {
+    if !app.show_state.show_sector || IS_MIN.get().unwrap().lock().unwrap().load(Ordering::SeqCst) {
         return;
     }
     let mut scale_to_base_s: f32 = 1.0;
@@ -427,14 +427,13 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
     let track_info = get_track_data_map(&race_data.track_id);
     // println!("🪵 [sector.rs:398]~ token ~ \x1b[0;32m&race_data.track_id\x1b[0m = {}", &race_data.track_id);
     let cur_sector_time = race_data.race_time - race_data.current_time;
+   
     if race_data.is_race_on < 1 && race_data.current_time == 0.0 {
+        
         if race_data.race_stop_ts == 0 {
             race_data.race_stop_ts = get_now_ts_mill();
         }
-        // println!(
-        //     "🪵 [sector.rs:490]~ token ~ \x1b[0;32mrace_data.is_race_on\x1b[0m = {} {} {} {} {} {} {}",
-        //     race_data.current_time, race_data.current_lap, race_data.distance, race_data.track_id, race_data.race_time,race_data.rpm,race_data.speed,
-        // ); 
+        
         if race_data.race_time == 0.0 {
             sector_data.s3.current_s_time = 0.0;
         }
@@ -450,10 +449,14 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
             "0.00".to_string(),
         );
     }else{
+        println!(
+            "🪵 [sector.rs:490]~ token ~ \x1b[0;32mrace_data.is_race_on\x1b[0m = {} {} {} {} {} {} {}",
+            race_data.current_time, race_data.current_lap, race_data.distance, race_data.track_id, race_data.race_time,race_data.rpm,race_data.speed,
+        ); 
         let is_min = IS_MIN.get().unwrap().lock().unwrap();
-            if is_min.load(Ordering::SeqCst) {
-                is_min.store(false, Ordering::SeqCst);
-            }
+        if is_min.load(Ordering::SeqCst) {
+            is_min.store(false, Ordering::SeqCst);
+        }
         
         if race_data.race_stop_ts > 0 {
             if race_data.track_id == sector_data.s1.last_track_id && race_data.distance > 0.0 {
@@ -475,6 +478,8 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
     }
 
     race_data.last_is_race_on = race_data.is_race_on;
+
+    
 
     if race_data.race_time <= 0.3 {
         // println!(

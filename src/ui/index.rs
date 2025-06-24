@@ -416,15 +416,14 @@ impl eframe::App for MyApp2 {
 
         // test_transparent(ctx, self);
         // render_white_overlay(ctx, self);
-        if check_is_min(ctx, self) { return; } // render_min(ctx, app)
         
         render_cross_line(ctx);
 
-
         render_sector(ctx, self);
         render_sight(ctx, self);
-
         render_setting(ctx, self);
+        if check_is_min(ctx, self) { return; } // render_min(ctx, app)
+
         render_dash(ctx, self);
         render_history(ctx, self);
 

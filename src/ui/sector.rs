@@ -449,14 +449,17 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
             "0.00".to_string(),
         );
     }else{
-        println!(
-            "🪵 [sector.rs:490]~ token ~ \x1b[0;32mrace_data.is_race_on\x1b[0m = {} {} {} {} {} {} {}",
-            race_data.current_time, race_data.current_lap, race_data.distance, race_data.track_id, race_data.race_time,race_data.rpm,race_data.speed,
-        ); 
-        let is_min = IS_MIN.get().unwrap().lock().unwrap();
-        if is_min.load(Ordering::SeqCst) {
-            is_min.store(false, Ordering::SeqCst);
+        // println!(
+        //     "🪵 [sector.rs:490]~ token ~ \x1b[0;32mrace_data.is_race_on\x1b[0m = {} {} {} {} {} {} {}",
+        //     race_data.current_time, race_data.current_lap, race_data.distance, race_data.track_id, race_data.race_time,race_data.rpm,race_data.speed,
+        // ); 
+        if race_data.last_is_race_on < 1{
+            let is_min = IS_MIN.get().unwrap().lock().unwrap();
+            if is_min.load(Ordering::SeqCst) {
+                is_min.store(false, Ordering::SeqCst);
+            }
         }
+        
         
         if race_data.race_stop_ts > 0 {
             if race_data.track_id == sector_data.s1.last_track_id && race_data.distance > 0.0 {

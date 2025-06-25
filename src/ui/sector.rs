@@ -427,10 +427,14 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
     let track_info = get_track_data_map(&race_data.track_id);
     // println!("🪵 [sector.rs:398]~ token ~ \x1b[0;32m&race_data.track_id\x1b[0m = {}", &race_data.track_id);
     let cur_sector_time = race_data.race_time - race_data.current_time;
-   
+
+    if race_data.car_id != 0 {
+        race_data.last_car_id = race_data.car_id;
+    }
+    
     if race_data.is_race_on < 1 && race_data.current_time == 0.0 {
         
-        if race_data.race_stop_ts == 0 {
+        if race_data.race_stop_ts == 0 && race_data.sub_distance > 6000.0  {
             race_data.race_stop_ts = get_now_ts_mill();
         }
         
@@ -438,7 +442,7 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
             sector_data.s3.current_s_time = 0.0;
         }
 
-        if race_data.lap_history.len() >= 3 {
+        if race_data.lap_history.len() >= 3    {
             let is_min = IS_MIN.get().unwrap().lock().unwrap();
             is_min.store(true, Ordering::SeqCst);
         }
@@ -465,7 +469,7 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
             if race_data.track_id == sector_data.s1.last_track_id && race_data.distance > 0.0 {
                 let time_pass = get_now_ts_mill() - race_data.race_stop_ts;
                 println!("🪵 [sector.rs:447]~ token ~ \x1b[0;32mtime_pass\x1b[0m = {}", time_pass);
-                if time_pass > 8000 && !sector_data.s3.is_done {
+                if time_pass > 10000 && !sector_data.s3.is_done && race_data.sub_distance > 6000.0 && race_data.tire_wear1*100.0 < 3.0 {
                     sector_data.s3.is_done = true;
                     race_data.pit_diff_time = time_pass as f64 / 2.0 / 1000.0; //下一圈承担一半p房耗时
                     let cur_lap = race_data.current_lap+1;

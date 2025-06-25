@@ -431,7 +431,7 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
     if race_data.car_id != 0 {
         race_data.last_car_id = race_data.car_id;
     }
-    
+
     if race_data.is_race_on < 1 && race_data.current_time == 0.0 {
         
         if race_data.race_stop_ts == 0 && race_data.sub_distance > 6000.0  {
@@ -474,6 +474,11 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
                     race_data.pit_diff_time = time_pass as f64 / 2.0 / 1000.0; //下一圈承担一半p房耗时
                     let cur_lap = race_data.current_lap+1;
                     race_data.out_pit_lap_list.push(cur_lap as usize);
+                    
+                    race_data.last_lap_tire_wear1 = 0.0;
+                    race_data.last_lap_tire_wear2 = 0.0;
+                    race_data.last_lap_tire_wear3 = 0.0;
+                    race_data.last_lap_tire_wear4 = 0.0;
                 }
             }
             // if get_now_ts_mill() - race_data.race_stop_ts > 1000 {

@@ -118,7 +118,10 @@ pub fn render_dash(ctx: &egui::Context, app: &mut MyApp2) {
                 // }
                 let gear = if race_data.gear == 11 {
                     "N".to_string()
-                } else {
+                } else if race_data.gear == 0 {
+                    "R".to_string()
+                }
+                else {
                     race_data.gear.to_string()
                 };
                 ui_at_rect.label(

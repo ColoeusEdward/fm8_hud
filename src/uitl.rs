@@ -374,6 +374,18 @@ pub fn format_milliseconds_to_mmssms(total_ms: u32) -> String {
     // 使用格式化宏来确保两位数的分钟和秒，三位数的毫秒（如果需要前导零）
     format!("{:02}'{:02}.{:03}", minutes, seconds, milliseconds)
 }
+pub fn format_milliseconds_to_mmssms2(total_ms: u32,only_sec:bool) -> String {
+    let minutes = total_ms / (1000 * 60); // 1分钟 = 60秒 = 60000毫秒
+    let remaining_ms_after_minutes = total_ms % (1000 * 60);
+
+    let seconds = remaining_ms_after_minutes / 1000; // 1秒 = 1000毫秒
+    let milliseconds = remaining_ms_after_minutes % 1000;
+    if only_sec && minutes == 0 {
+        return format!("{:02}.{:03}", seconds, milliseconds);
+    }
+    // 使用格式化宏来确保两位数的分钟和秒，三位数的毫秒（如果需要前导零）
+    format!("{:02}'{:02}.{:03}", minutes, seconds, milliseconds)
+}
 
 pub fn get_sreen_info()->(f32,f32){
     let screen_width = unsafe { GetSystemMetrics(SM_CXSCREEN) } as f32;

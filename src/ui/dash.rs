@@ -692,7 +692,8 @@ fn render_boost(
             let mut end_degree = 270.0 - half_total_len;
             // println!("🪵 [dash.rs:355]~ token ~ \x1b[0;32mrace_data.fuel\x1b[0m = {}", race_data.fuel);
             // end_degree = end_degree + total_len * 1.0;
-            end_degree = end_degree + total_len * boost * 2.5;
+            end_degree = end_degree + total_len * boost;
+            // * 2.5;
             // 定义圆弧的中心位置
             // 我们将其放置在标签旁边以便观察
             // ui_at_rect.label(RichText::new("FUEL").color(Color32::WHITE));

@@ -71,6 +71,7 @@ pub struct ShowState {
     pub show_dash: bool,
     pub show_history: bool,
     pub show_other: bool,
+    pub show_opt_time: bool,
 }
 
 impl Default for ShowState {
@@ -84,6 +85,7 @@ impl Default for ShowState {
             show_dash: true,
             show_history: true,
             show_other: false,
+            show_opt_time: true,
         }
     }
 }
@@ -110,7 +112,11 @@ pub struct SettingData {
 
     pub history_len: String,
     pub history_scale: f32,
-    pub history_base_len: f32
+    pub history_base_len: f32,
+
+    pub opt_time_len: String,
+    pub opt_time_scale: f32,
+    pub opt_time_base_len: f32
 }
 
 impl Default for SettingData {
@@ -136,7 +142,11 @@ impl Default for SettingData {
 
             history_len: "170".to_string(),
             history_scale: 0.4028,
-            history_base_len: 160.0
+            history_base_len: 160.0,
+
+            opt_time_len: "270".to_string(),
+            opt_time_scale: 6.75,
+            opt_time_base_len: 270.0
         }
     }
 }

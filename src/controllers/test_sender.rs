@@ -35,7 +35,7 @@ pub fn init_udp_server() {
         let send_socket = socket.try_clone().expect("Failed to clone the socket");
 
         // 预设一个外部目标地址和端口，用于主动发送数据
-        let external_target_addr = "127.0.0.1:8004"; // 假设有一个客户端在 8081 端口监听
+        let external_target_addr = "127.0.0.1:8000"; // 假设有一个客户端在 8081 端口监听
 
         // 启动一个独立的线程来定期向外部发送数据
         thread::spawn(move || {

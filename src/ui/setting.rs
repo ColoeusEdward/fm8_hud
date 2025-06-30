@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     enums::CarSetting,
-    ui::index::{CAR_SETTING, CUR_CAR_RPM_SETTING, GAME_RACE_DATA, IS_MOUSE_PASS, IS_UDP_REDIRECT},
+    ui::index::{CAR_SETTING, CUR_CAR_RPM_SETTING, GAME_RACE_DATA, IS_MOUSE_PASS, IS_UDP_REDIRECT, SECTOR_RECORD_DATA}, uitl::{format_milliseconds_to_mmssms, format_milliseconds_to_mmssms2},
 };
 use eframe::egui::{self, Align, Area, FontId, Layout, Pos2, RichText, TextEdit};
 
@@ -267,7 +267,7 @@ pub fn render_complist(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, 
                                 .font(egui::FontId::proportional(14.0)),
                         );
 
-                        ui.add_space(68.0);
+                        ui.add_space(58.0);
                         ui.label(
                             RichText::new("长度")
                                 .color(egui::Color32::WHITE)
@@ -277,7 +277,34 @@ pub fn render_complist(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, 
                             TextEdit::singleline(&mut app.setting_data.history_len)
                                 .desired_width(80.0),
                         );
+                        ui.add_space(10.0);
+                        ui.checkbox(
+                            &mut app.show_state.show_opt_time,
+                            RichText::new("Opt圈速")
+                                .color(egui::Color32::WHITE)
+                                .font(egui::FontId::proportional(14.0)),
+                        );
                     });
+
+                    // ui.horizontal(|ui| {
+                    //     ui.checkbox(
+                    //         &mut app.show_state.show_opt_time,
+                    //         RichText::new("Opt圈速")
+                    //             .color(egui::Color32::WHITE)
+                    //             .font(egui::FontId::proportional(14.0)),
+                    //     );
+
+                    //     ui.add_space(68.0);
+                    //     ui.label(
+                    //         RichText::new("长度")
+                    //             .color(egui::Color32::WHITE)
+                    //             .font(egui::FontId::proportional(14.0)),
+                    //     );
+                    //     ui.add(
+                    //         TextEdit::singleline(&mut app.setting_data.opt_time_len)
+                    //             .desired_width(80.0),
+                    //     );
+                    // });
 
                     ui.separator();
 
@@ -328,6 +355,12 @@ pub fn render_other(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, ui:
 
     if app.show_state.show_other {
         let screen_rect = ctx.screen_rect();
+        let  sector_data = SECTOR_RECORD_DATA.get().unwrap().lock().unwrap();
+        let opt_best_time = sector_data.s1.best_time + sector_data.s2.best_time + sector_data.s3.best_time;
+        let opt_best_time = format_milliseconds_to_mmssms((opt_best_time * 1000.0) as u32);
+        let s1_time = format_milliseconds_to_mmssms2((sector_data.s1.best_time * 1000.0) as u32,true);
+        let s2_time = format_milliseconds_to_mmssms2((sector_data.s2.best_time * 1000.0) as u32,true);
+        let s3_time = format_milliseconds_to_mmssms2((sector_data.s3.best_time * 1000.0) as u32,true);
 
         let pos = Pos2::new(screen_rect.right() + 100.0, screen_rect.top() + 28.0);
         Area::new("setting_other".into())
@@ -438,6 +471,30 @@ pub fn render_other(ctx: &egui::Context, app: &mut crate::ui::index::MyApp2, ui:
                                                             // .size(14.0),
                         );
                     });
+
+
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new("赛段Opt: ")
+                                .color(egui::Color32::WHITE)
+                                .font(FontId::monospace(14.0)), // .family(egui::FontFamily::Name("base".into()))
+                                                                // .size(14.0),
+                        );
+                        ui.add_space(10.0);
+                        ui.label(
+                            RichText::new(format!(
+                                " {} / {} / {} / {}",
+                                s1_time,
+                                s2_time,
+                                s3_time,
+                                opt_best_time
+                            ))
+                            .color(egui::Color32::WHITE)
+                            .font(FontId::monospace(14.0)), // .family(egui::FontFamily::Name("base".into()))
+                                                            // .size(14.0),
+                        );
+                    });
+
 
                     ui.separator();
 

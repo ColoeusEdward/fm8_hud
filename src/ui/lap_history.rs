@@ -145,8 +145,10 @@ fn render_lap_table(
             ui_at_rect.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
                 let idx = if i > 0 {
                     i as usize
-                } else {
+                } else if i == 0 {
                     (race_data.current_lap + 1) as usize
+                } else {
+                    0
                 };
                 let p_str = if race_data.out_pit_lap_list.contains(&idx) {
                     "P"

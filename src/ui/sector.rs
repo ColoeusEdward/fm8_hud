@@ -484,6 +484,11 @@ pub fn sector_logic2(tele_data: &MutexGuard<BTreeMap<String, f32>>) -> (String, 
                     race_data.last_lap_tire_wear2 = 0.0;
                     race_data.last_lap_tire_wear3 = 0.0;
                     race_data.last_lap_tire_wear4 = 0.0;
+
+                    race_data.lap_start_tire_wear1 = 0.0;
+                    race_data.lap_start_tire_wear2 = 0.0;
+                    race_data.lap_start_tire_wear3 = 0.0;
+                    race_data.lap_start_tire_wear4 = 0.0;
                 }
             }
             // if get_now_ts_mill() - race_data.race_stop_ts > 1000 {

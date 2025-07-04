@@ -1528,7 +1528,7 @@ dependencies = [
 
 [[package]]
 name = "fm8_hud"
-version = "0.1.63"
+version = "0.1.64"
 dependencies = [
  "bincode",
  "chrono",

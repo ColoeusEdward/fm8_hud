@@ -806,7 +806,7 @@ fn render_dot(
 
 pub fn load_img(ctx: &egui::Context, app: &mut MyApp2) {
     // 将图片数据嵌入到二进制文件中
-    let image_data = include_bytes!("../../resource/GT_hud_LITE_VERSION5.png"); // 确保路径正确
+    let image_data = include_bytes!("../../resource/GT_hud_LITE_VERSION5_1.png"); // 确保路径正确
     let image_data2 = include_bytes!("../../resource/fuel_background.png"); // 确保路径正确
     let image_data3 = include_bytes!("../../resource/turbo_background.png"); // 确保路径正确
     let image_data4 = include_bytes!("../../resource/gap_gradient.png"); // 确保路径正确

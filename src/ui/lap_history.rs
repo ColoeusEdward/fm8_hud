@@ -209,8 +209,9 @@ fn render_lap_table(
         render_one_lap(-1, &opt_best_time, "Opt");
     }
 
-    let min_idx = if his_list_len > 10 {
-        his_list_len - 10 + 1
+    let show_num = 9;
+    let min_idx = if his_list_len > show_num {
+        his_list_len - show_num + 1
     } else {
         1
     };

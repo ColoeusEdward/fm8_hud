@@ -122,7 +122,7 @@ pub fn render_sector(ctx: &egui::Context, app: &mut MyApp2) {
     if delta_show {
         let delta = Area::new("delta".into())
             .current_pos(egui::pos2(
-                app.sector_pos.x + 220.0 * scale_to_base_s,
+                app.sector_pos.x + 217.0 * scale_to_base_s,
                 app.sector_pos.y,
             ))
             .show(ctx, |ui| {
